@@ -16,7 +16,7 @@ Los datos son mensuales. Van desde Enero 2021 hasta Abril 2023.
 
 **Conjunto de datos: Conteo vehicular en las principales avenidas de Montevideo**
 
--   `id_detector`: Entero - ID de la cámara que monitorea un carril específico para detectar vehículos.
+-   `cod_detector`: Entero - ID de la cámara que monitorea un carril específico para detectar vehículos.
 -   `id_carril`: Entero - Número del carril monitoreado (1, 2, 3, ...).
 -   `fecha`: AAAA-MM-DD - Día en que se realizó la medición.
 -   `hora`: hh:mm:ss - Hora en que se realizó la medición.
@@ -30,7 +30,7 @@ Los datos son mensuales. Van desde Enero 2021 hasta Abril 2023.
 
 **Conjunto de datos: Velocidad promedio vehicular en las principales avenidas de Montevideo**
 
--   `id_detector`: Entero - ID de la cámara que monitorea un carril específico para detectar vehículos.
+-   `cod_detector`: Entero - ID de la cámara que monitorea un carril específico para detectar vehículos.
 -   `id_carril`: Entero - Número del carril monitoreado (1, 2, 3, ...).
 -   `fecha`: AAAA-MM-DD - Día en que se realizó la medición.
 -   `hora`: hh:mm:ss - Hora en que se realizó la medición.

@@ -50,6 +50,9 @@ Los datos son mensuales. Van desde Enero 2021 hasta Abril 2023.
 - `latitud`: Float - Coordenada que indica la latitud de la ubicación del sensor.
 - `longitud`: Float - Coordenada que indica la longitud de la ubicación del sensor.
 
+## Posible Google Api a utilizar
+[Google Geocoding Documentacion](https://developers.google.com/maps/documentation/geocoding/requests-reverse-geocoding?hl=es-419)
+
 
 ## Posibles Preguntas de Investigación
 

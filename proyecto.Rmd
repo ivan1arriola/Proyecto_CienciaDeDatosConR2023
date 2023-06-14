@@ -1,0 +1,46 @@
+---
+title: "Proyecto"
+output: html_document
+date: "2023-06-14"
+---
+
+```{r}
+library(tidyverse)
+library(DBI)
+library(RMySQL)
+```
+
+```{r variablesDeEntorno, eval=FALSE}
+usethis::edit_r_environ(
+  scope = "project"
+)
+```
+```{r}
+con <- DBI::dbConnect(
+  RMySQL::MySQL(),
+  host = Sys.getenv("DB_HOST"),
+  port = 3306,
+  user = Sys.getenv("DB_USER"),
+  password = Sys.getenv("DB_PASS"),
+  dbname = Sys.getenv("DB_NAME")
+)
+```
+
+```{r}
+DBI::dbGetQuery(
+  con,
+  "SELECT COUNT(*) FROM `conteo_vehicular`"
+)
+```
+
+```{r}
+DBI::dbGetQuery(
+  con,
+  "SELECT * FROM `conteo_vehicular` GROUP BY `fecha`
+  "
+)
+```
+
+
+
+

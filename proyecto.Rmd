@@ -4,13 +4,13 @@ output: html_document
 date: "2023-06-14"
 ---
 
-```{r}
+```{r , echo=FALSE}
 library(tidyverse)
 library(DBI)
 library(RPostgres)
 ```
 
-```{r variablesDeEntorno, eval=FALSE}
+```{r variablesDeEntorno, eval=FALSE, echo=FALSE}
 usethis::edit_r_environ(
   scope = "project"
 )
@@ -31,10 +31,8 @@ con <- DBI::dbConnect(
 
 ```{r}
 # Obtener las tablas de la base de datos
-tablas <- DBI::dbListTables(con)
+(tablas <- DBI::dbListTables(con) )
 
-# Imprimir las tablas
-print(tablas)
 ```
 
 

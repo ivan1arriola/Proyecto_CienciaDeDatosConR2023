@@ -7,7 +7,7 @@ date: "2023-06-14"
 ```{r}
 library(tidyverse)
 library(DBI)
-library(RMySQL)
+library(RPostgres)
 ```
 
 ```{r variablesDeEntorno, eval=FALSE}
@@ -15,30 +15,49 @@ usethis::edit_r_environ(
   scope = "project"
 )
 ```
+
+
 ```{r}
 con <- DBI::dbConnect(
-  RMySQL::MySQL(),
+  RPostgres::Postgres(),
   host = Sys.getenv("DB_HOST"),
-  port = 3306,
+  port = Sys.getenv("DB_PORT"),
   user = Sys.getenv("DB_USER"),
   password = Sys.getenv("DB_PASS"),
   dbname = Sys.getenv("DB_NAME")
 )
 ```
 
+
 ```{r}
-DBI::dbGetQuery(
+# Obtener las tablas de la base de datos
+tablas <- DBI::dbListTables(con)
+
+# Imprimir las tablas
+print(tablas)
+```
+
+
+
+```{r}
+(
+  d_sensores <- DBI::dbGetQuery(
   con,
-  "SELECT COUNT(*) FROM `conteo_vehicular`"
+  "SELECT * FROM d_sensores"
+  )
 )
 ```
 
-```{r}
-DBI::dbGetQuery(
-  con,
-  "SELECT * FROM `conteo_vehicular` GROUP BY `fecha`
-  "
-)
+```{r Mapa De Sensores}
+library(leaflet)
+
+map <- leaflet() %>%
+  addTiles() %>%
+  addMarkers(data = d_sensores, lat = ~latitud, lng = ~longitud,
+             label = ~paste(dsc_avenida, " - ", dsc_int_anterior, " - ", dsc_int_siguiente))
+
+map
+
 ```
 
 

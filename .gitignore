@@ -50,3 +50,16 @@ rsconnect/
 
 Datos.zip
 Datos/
+*.csv
+*.xlsx
+*.xls
+*.sav
+
+*.html  
+*.pdf
+*/*.html
+*/*.pdf
+*/*.csv
+*/*.xlsx
+*/*.xls
+*/*.sav

@@ -58,12 +58,13 @@ for (i in tablas){
 ```{r Mapa De Sensores}
 library(leaflet)
 
-map <- leaflet() %>%
-  addTiles() %>%
-  addMarkers(data = d_sensores, lat = ~latitud, lng = ~longitud,
+(
+  map <- leaflet() %>%
+    addTiles() %>%
+    addMarkerClusterOptions(clusterOptions = markerClusterOptions()) %>%
+    addMarkers(data = datos, lat = ~latitud, lng = ~longitud,
              label = ~paste(dsc_avenida, " - ", dsc_int_anterior, " - ", dsc_int_siguiente))
-
-map
+)
 
 ```
 
@@ -149,7 +150,11 @@ leaflet(radares_marzo23R) %>%
 
 ```
 
-```{r}
+
+
+
+
+```{r getBarrio}
 library(httr)
 library(jsonlite)
 
@@ -164,32 +169,101 @@ getBarrio <- function(lat, lng) {
     result_type = "neighborhood"
   )
   response <- GET(url, query = params)
-  barrio <- content(response)$results[[1]]$address_components[[1]]$long_name
+  
+  if (http_status(response)$category != "Success") {
+    stop("Error en la solicitud a la API de Google Maps")
+  }
+  
+  data <- content(response)
+  
+  if (data$status != "OK" || length(data$results) == 0) {
+    print(c(lat, lng))
+    
+    params <- list(
+      latlng = paste(lat, lng, sep = ","),
+      key = api_key
+    )
+    response <- GET(url, query = params)
+    data <- content(response)
+    print(data$results[[1]]$address_components[[3]]$long_name)
+    return(NA)
+  }
+  
+  barrio <- data$results[[1]]$address_components[[1]]$long_name
   return(barrio)
 }
 
 
 ```
 
-```{r Obtener los barrios}
+```{r Obtener los barrios, eval=FALSE}
+cant <- length(cantMarzorLimite60$latitud)
 
 # Obtener los barrios para cada par de coordenadas
-barrios <- sapply(1:1, function(i) {
+barrios <- sapply(1:cant, function(i) {
   getBarrio(cantMarzorLimite60$latitud[i], cantMarzorLimite60$longitud[i])
 })
 
 # Asignar los barrios al dataframe
-cantMarzorLimite60$Barrio <- barrios
+(cantMarzorLimite60$Barrio <- barrios)
+```
+
+
+## 2.¿Existe alguna correlación entre el volumen de tráfico y la velocidad promedio en las avenidas de Montevideo?
+
+
+```{r Importar velocidad - fecha - volumen - avenida }
+(
+  promediosMarzo23 <- DBI::dbGetQuery(
+    con,
+    "
+      WITH velocidad_volumen_enero_2023 AS (
+  SELECT
+    fct_registros.velocidad,
+    fct_registros.volume,
+    d_sensores.dsc_avenida, 
+    d_date.year_actual
+  FROM fct_registros
+  LEFT JOIN d_sensores ON fct_registros.id_detector = d_sensores.id_detector
+  LEFT JOIN d_date ON fct_registros.id_fecha = d_date.id_fecha
+),
+promedios_marzo_23 AS (
+  SELECT
+    dsc_avenida,
+    year_actual,
+    AVG(velocidad) AS velocidad_media,
+    AVG(volume) AS volumen_media
+  FROM velocidad_volumen_enero_2023
+  GROUP BY dsc_avenida, year_actual
+)
+SELECT *
+FROM promedios_marzo_23
+
+    "
+  )
+)
 
 ```
+
 
 
 ```{r}
-resultados <- promedios_velocidad_marzo23 %>%
-  dplyr::group_by(latitud, longitud) %>%
-  dplyr::summarize(num_dsc_avenida = n_distinct(dsc_avenida))
-
-(elementos_diferentes <- resultados[resultados$num_dsc_avenida > 1, ])
+promediosMarzo23 %>% 
+  ggplot(
+    aes(
+      x = velocidad_media,
+      y = volumen_media
+    )
+  ) +
+  geom_point() + 
+  facet_wrap(~year_actual) +
+  scale_x_continuous(name = "Velocidad Media Anual") +
+  scale_y_continuous(name = "Volumen de Vehiculos Medio Anual") 
+  theme()
+  
+    
 ```
+El grafico no muestra una relacion aparente entre los promedios de las variables
+
 
 

@@ -72,22 +72,34 @@ map
 1.  ¿Influye el barrio con la velocidad a la que van los vehículos?
 2.  ¿Existe alguna correlación entre el volumen de tráfico y la velocidad promedio en las avenidas de Montevideo?
 3.  ¿Existen diferencias en el volumen de tráfico y la velocidad promedio entre días laborales y fines de semana?
-4.  ¿Cuáles son las avenidas con los mayores promedios de velocidad en Montevideo?
+4.  ¿Cuáles son las avenidas con los marzores promedios de velocidad en Montevideo?
 
-# ¿Cuáles son las avenidas con los mayores promedios de velocidad en Montevideo?
+# ¿Cuáles son las avenidas con los marzores promedios de velocidad en Montevideo?
 
-Para responder a esta pregunta, necesito determinar en que intervalo de tiempo voy a considerar el promedio. Ahora como primer acercamiento a los datos, me interesa determinar el promedio de velocidades por radar (cual va a estar en una determinada avenida), en el periodo de *Mayo 2023*.
+Para responder a esta pregunta, necesito determinar en que intervalo de tiempo voy a considerar el promedio. Ahora como primer acercamiento a los datos, me interesa determinar el promedio de velocidades por radar (cual va a estar en una determinada avenida), en el periodo de *marzo 2023*.
 
 ```{r}
 (
-  promedios_velocidad_mayo23 <- DBI::dbGetQuery(
+  promedios_velocidad_marzo23 <- DBI::dbGetQuery(
     con,
     "
-      SELECT fct_registros.velocidad, fct_registros.id_hora, d_sensores.dsc_avenida, d_date.mmyyyy, d_sensores.latitud, d_sensores.longitud
-FROM fct_registros
-LEFT JOIN d_sensores ON fct_registros.id_detector = d_sensores.id_detector
-LEFT JOIN d_date ON fct_registros.id_fecha = d_date.id_fecha
-LIMIT 1000
+      SELECT
+        fct_registros.velocidad, 
+        fct_registros.id_hora, 
+        d_sensores.dsc_avenida, 
+        d_date.mmyyyy, 
+        d_sensores.latitud, 
+        d_sensores.longitud
+      FROM fct_registros
+      LEFT JOIN 
+        d_sensores 
+        ON 
+          fct_registros.id_detector = d_sensores.id_detector
+      LEFT JOIN 
+        d_date 
+        ON 
+          fct_registros.id_fecha = d_date.id_fecha
+      WHERE d_date.mmyyyy = '102021'
 
     "
   )
@@ -97,26 +109,87 @@ LIMIT 1000
 
 Ahora quiero visualizar en que partes de montevideo fueron observados estos datos
 
+```{r Cantidad de veces que se paso el limite de 60km/h en Marzo 2023}
+(
+cantMarzorLimite60 <- promedios_velocidad_marzo23 %>% 
+  select(dsc_avenida, latitud, longitud, velocidad) %>% 
+  group_by(dsc_avenida, latitud, longitud) %>% 
+  summarise(
+    cantMayorALimite = sum(velocidad > 60)
+  ) %>% arrange(desc(cantMayorALimite))
+)
+
+```
+
+
+
 ```{r Mapa de las observaciones}
-library(magrittr)
+(
+radares_marzo23R <- cantMarzorLimite60
+)
 
-radares_mayo23R <- promedios_velocidad_mayo23 %>% dplyr::select(dsc_avenida, latitud, longitud) %>% 
-  dplyr::distinct(latitud, longitud, .keep_all = TRUE)
+getColor <- function(cantMayorALimite) {
+  ifelse(cantMayorALimite <= 100, "green", ifelse(cantMayorALimite <= 1000, "orange", "red"))
+}
 
 
-leaflet() %>%
+icons <- awesomeIcons(
+  icon = 'ios-close',
+  iconColor = 'black',
+  library = 'ion',
+  markerColor = getColor(radares_marzo23R$cantMayorALimite)
+)
+
+leaflet(radares_marzo23R) %>%
   addTiles() %>%
-  addMarkers(data = radares_mayo23R, lat = ~latitud, lng = ~longitud,
-             label = ~dsc_avenida)
+  addAwesomeMarkers(lat = ~latitud, lng = ~longitud, icon=icons,
+             label = ~dsc_avenida
+             )
 
 
 ```
+
 ```{r}
-resultados <- promedios_velocidad_mayo23 %>%
+library(httr)
+library(jsonlite)
+
+
+getBarrio <- function(lat, lng) {
+  url <- "https://maps.googleapis.com/maps/api/geocode/json"
+  api_key <- Sys.getenv("GOOGLE_KEY")
+  
+  params <- list(
+    latlng = paste(lat, lng, sep = ","),
+    key = api_key,
+    result_type = "neighborhood"
+  )
+  response <- GET(url, query = params)
+  barrio <- content(response)$results[[1]]$address_components[[1]]$long_name
+  return(barrio)
+}
+
+
+```
+
+```{r Obtener los barrios}
+
+# Obtener los barrios para cada par de coordenadas
+barrios <- sapply(1:1, function(i) {
+  getBarrio(cantMarzorLimite60$lat[i], cantMarzorLimite60$lng[i])
+})
+
+# Asignar los barrios al dataframe
+cantMarzorLimite60$Barrio <- barrios
+
+```
+
+
+```{r}
+resultados <- promedios_velocidad_marzo23 %>%
   dplyr::group_by(latitud, longitud) %>%
   dplyr::summarize(num_dsc_avenida = n_distinct(dsc_avenida))
 
-elementos_diferentes <- resultados[resultados$num_dsc_avenida > 1, ]
+(elementos_diferentes <- resultados[resultados$num_dsc_avenida > 1, ])
 ```
 
 

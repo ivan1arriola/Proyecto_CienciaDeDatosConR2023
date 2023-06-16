@@ -4,20 +4,19 @@ output: html_document
 date: "2023-06-14"
 ---
 
-```{r , echo=FALSE}
+```{r Librerias , message=FALSE}
 library(tidyverse)
 library(DBI)
 library(RPostgres)
 ```
 
-```{r variablesDeEntorno, eval=FALSE, echo=FALSE}
+```{r Variables de Entorno, eval=FALSE, echo=FALSE}
 usethis::edit_r_environ(
   scope = "project"
 )
 ```
 
-
-```{r}
+```{r Coneccion a Base de Datos}
 con <- DBI::dbConnect(
   RPostgres::Postgres(),
   host = Sys.getenv("DB_HOST"),
@@ -28,22 +27,32 @@ con <- DBI::dbConnect(
 )
 ```
 
-
-```{r}
+```{r Tablas de la base de datos}
 # Obtener las tablas de la base de datos
 (tablas <- DBI::dbListTables(con) )
 
+# Obtener las variables de las tablas
+for (i in tablas){
+  cant <- dbGetQuery(con, paste("Select count(*) from", i ))[1,1]
+  cat(i, "cant : ")
+  print(cant)
+  print(DBI::dbListFields(con, name = i))
+  cat("\n")
+}
+
 ```
 
-
-
-```{r}
+```{r d_sensores}
 (
   d_sensores <- DBI::dbGetQuery(
   con,
   "SELECT * FROM d_sensores"
   )
 )
+```
+
+```{r}
+
 ```
 
 ```{r Mapa De Sensores}
@@ -58,6 +67,56 @@ map
 
 ```
 
+## Preguntas de Investigación
 
+1.  ¿Influye el barrio con la velocidad a la que van los vehículos?
+2.  ¿Existe alguna correlación entre el volumen de tráfico y la velocidad promedio en las avenidas de Montevideo?
+3.  ¿Existen diferencias en el volumen de tráfico y la velocidad promedio entre días laborales y fines de semana?
+4.  ¿Cuáles son las avenidas con los mayores promedios de velocidad en Montevideo?
+
+# ¿Cuáles son las avenidas con los mayores promedios de velocidad en Montevideo?
+
+Para responder a esta pregunta, necesito determinar en que intervalo de tiempo voy a considerar el promedio. Ahora como primer acercamiento a los datos, me interesa determinar el promedio de velocidades por radar (cual va a estar en una determinada avenida), en el periodo de *Mayo 2023*.
+
+```{r}
+(
+  promedios_velocidad_mayo23 <- DBI::dbGetQuery(
+    con,
+    "
+      SELECT fct_registros.velocidad, fct_registros.id_hora, d_sensores.dsc_avenida, d_date.mmyyyy, d_sensores.latitud, d_sensores.longitud
+FROM fct_registros
+LEFT JOIN d_sensores ON fct_registros.id_detector = d_sensores.id_detector
+LEFT JOIN d_date ON fct_registros.id_fecha = d_date.id_fecha
+LIMIT 1000
+
+    "
+  )
+)
+
+```
+
+Ahora quiero visualizar en que partes de montevideo fueron observados estos datos
+
+```{r Mapa de las observaciones}
+library(magrittr)
+
+radares_mayo23R <- promedios_velocidad_mayo23 %>% dplyr::select(dsc_avenida, latitud, longitud) %>% 
+  dplyr::distinct(latitud, longitud, .keep_all = TRUE)
+
+
+leaflet() %>%
+  addTiles() %>%
+  addMarkers(data = radares_mayo23R, lat = ~latitud, lng = ~longitud,
+             label = ~dsc_avenida)
+
+
+```
+```{r}
+resultados <- promedios_velocidad_mayo23 %>%
+  dplyr::group_by(latitud, longitud) %>%
+  dplyr::summarize(num_dsc_avenida = n_distinct(dsc_avenida))
+
+elementos_diferentes <- resultados[resultados$num_dsc_avenida > 1, ]
+```
 
 

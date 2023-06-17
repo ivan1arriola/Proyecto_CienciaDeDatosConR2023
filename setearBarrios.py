@@ -1,13 +1,15 @@
 import requests
 import json
 import psycopg2
+import os
 
-# Detalles de conexión
-DB_USER = "scraping_iesta"
-DB_PASS = "scraping_iesta"
-DB_PORT = "5439"
-DB_HOST = "164.90.254.224"
-DB_NAME = "datos_transito"
+DB_USER = os.environ.get("DB_USER")
+DB_PASS = os.environ.get("DB_PASS")
+DB_PORT = os.environ.get("DB_PORT")
+DB_HOST = os.environ.get("DB_HOST")
+DB_NAME = os.environ.get("DB_NAME")
+API_KEY = os.environ.get("GOOGLE_KEY")
+
 
 # Establecer la conexión
 conn = psycopg2.connect(
@@ -66,8 +68,7 @@ def obtener_barrio(latitud, longitud, calle, esquina, api_key):
 
     return None
 
-# API Key de Google Maps
-API_KEY = "AIzaSyDvgW2B2SVrvlWZqgu8Cug92dGEIibJIeg"
+
 
 cambios = []
 

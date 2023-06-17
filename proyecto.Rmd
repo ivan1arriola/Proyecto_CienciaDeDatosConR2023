@@ -151,6 +151,7 @@ leaflet(radares_marzo23R) %>%
 
 ```
 
+<<<<<<< HEAD
 
 
 
@@ -263,6 +264,49 @@ promediosMarzo23 %>%
   theme()
   
     
+=======
+```{r}
+library(httr)
+library(jsonlite)
+
+
+getBarrio <- function(lat, lng) {
+  url <- "https://maps.googleapis.com/maps/api/geocode/json"
+  api_key <- Sys.getenv("GOOGLE_KEY")
+  
+  params <- list(
+    latlng = paste(lat, lng, sep = ","),
+    key = api_key,
+    result_type = "neighborhood"
+  )
+  response <- GET(url, query = params)
+  barrio <- content(response)$results[[1]]$address_components[[1]]$long_name
+  return(barrio)
+}
+
+
+```
+
+```{r Obtener los barrios}
+
+# Obtener los barrios para cada par de coordenadas
+barrios <- sapply(1:1, function(i) {
+  getBarrio(cantMarzorLimite60$lat[i], cantMarzorLimite60$lng[i])
+})
+
+# Asignar los barrios al dataframe
+cantMarzorLimite60$Barrio <- barrios
+
+```
+
+
+```{r}
+resultados <- promedios_velocidad_marzo23 %>%
+  dplyr::group_by(latitud, longitud) %>%
+  dplyr::summarize(num_dsc_avenida = n_distinct(dsc_avenida))
+
+(elementos_diferentes <- resultados[resultados$num_dsc_avenida > 1, ])
+>>>>>>> 4ec0383f4840c201a73144b5fe86c716aa977ea8
 ```
 El grafico no muestra una relacion aparente entre los promedios de las variables
 

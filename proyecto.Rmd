@@ -4,6 +4,7 @@ output: html_document
 date: "2023-06-14"
 ---
 
+
 ```{r Librerias , message=FALSE}
 library(tidyverse)
 library(DBI)

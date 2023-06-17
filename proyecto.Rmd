@@ -4,11 +4,15 @@ output: html_document
 date: "2023-06-14"
 ---
 
+## De donde sacamos la informacion
+Mapas - https://github.com/tereom/taller-mapas-mv/
+
 
 ```{r Librerias , message=FALSE}
 library(tidyverse)
 library(DBI)
 library(RPostgres)
+library(sf)
 ```
 
 ```{r Variables de Entorno, eval=FALSE, echo=FALSE}
@@ -52,7 +56,9 @@ for (i in tablas){
 )
 ```
 
-```{r}
+```{r NA's en d_sensores$barrio}
+
+d_sensores %>% select(barrio) %>% summarise( NAs = sum(is.na(barrio)))
 
 ```
 
@@ -61,22 +67,74 @@ library(leaflet)
 
 (
   map <- leaflet() %>%
-    addTiles() %>%
-    addMarkerClusterOptions(clusterOptions = markerClusterOptions()) %>%
-    addMarkers(data = datos, lat = ~latitud, lng = ~longitud,
-             label = ~paste(dsc_avenida, " - ", dsc_int_anterior, " - ", dsc_int_siguiente))
+  addTiles() %>%
+  addMarkers(data = d_sensores, lat = ~latitud, lng = ~longitud,
+             label = ~paste(dsc_avenida, " - ", dsc_int_anterior, " - ", dsc_int_siguiente),
+             clusterOptions = markerClusterOptions())
 )
 
 ```
 
-## Preguntas de Investigación
+# Preguntas de Investigación
 
 1.  ¿Influye el barrio con la velocidad a la que van los vehículos?
 2.  ¿Existe alguna correlación entre el volumen de tráfico y la velocidad promedio en las avenidas de Montevideo?
 3.  ¿Existen diferencias en el volumen de tráfico y la velocidad promedio entre días laborales y fines de semana?
 4.  ¿Cuáles son las avenidas con los marzores promedios de velocidad en Montevideo?
 
-# ¿Cuáles son las avenidas con los marzores promedios de velocidad en Montevideo?
+## 1 -  ¿Influye el barrio con la velocidad a la que van los vehículos?
+
+```{r Importar velocidad - barrio  }
+(
+  velocidadBarrioMedia <- DBI::dbGetQuery(
+    con,
+    "
+    SELECT
+      d_sensores.barrio,
+      AVG(fct_registros.velocidad) AS promedio_velocidad
+    FROM fct_registros
+    LEFT JOIN d_sensores ON fct_registros.id_detector = d_sensores.id_detector
+    GROUP BY d_sensores.barrio
+    "
+  )
+
+)
+
+```
+
+```{r}
+velocidadBarrioMedia %>% ggplot(
+      aes(
+          y = promedio_velocidad,
+          x= fct_reorder(barrio, promedio_velocidad)
+        )
+    ) +
+  geom_col() +
+  coord_flip() +
+  theme(
+    aspect.ratio = 1,
+  ) +
+  scale_x_discrete(name = "Barrio") + 
+  scale_y_continuous(name = "Promedio de Velocidad")
+  
+
+```
+
+```{r Mapa de los barrios segun velocidad media}
+
+mvd_map <- st_read(here::here("./")
+
+```
+
+
+
+
+
+
+
+
+
+## 4 - ¿Cuáles son las avenidas con los mayores promedios de velocidad en Montevideo?
 
 Para responder a esta pregunta, necesito determinar en que intervalo de tiempo voy a considerar el promedio. Ahora como primer acercamiento a los datos, me interesa determinar el promedio de velocidades por radar (cual va a estar en una determinada avenida), en el periodo de *marzo 2023*.
 
@@ -111,7 +169,7 @@ Para responder a esta pregunta, necesito determinar en que intervalo de tiempo v
 
 Ahora quiero visualizar en que partes de montevideo fueron observados estos datos
 
-```{r Cantidad de veces que se paso el limite de 60km/h en Marzo 2023}
+```{r Cantidad de veces que se paso el limite de 60km/h en Marzo 2023 x Sensor}
 (
 cantMarzorLimite60 <- promedios_velocidad_marzo23 %>% 
   select(dsc_avenida, latitud, longitud, velocidad) %>% 
@@ -123,13 +181,14 @@ cantMarzorLimite60 <- promedios_velocidad_marzo23 %>%
 
 ```
 
-
-
 ```{r Mapa de las observaciones}
-(
-radares_marzo23R <- cantMarzorLimite60
-)
 
+div <- function(cantMayorALimite) {
+  paste0("<div>", cantMayorALimite, "</div>")
+}
+
+
+#Clasifica 
 getColor <- function(cantMayorALimite) {
   ifelse(cantMayorALimite <= 100, "green", ifelse(cantMayorALimite <= 1000, "orange", "red"))
 }
@@ -139,80 +198,21 @@ icons <- awesomeIcons(
   icon = 'ios-close',
   iconColor = 'black',
   library = 'ion',
-  markerColor = getColor(radares_marzo23R$cantMayorALimite)
+  markerColor = getColor(cantMarzorLimite60$cantMayorALimite)
 )
 
-leaflet(radares_marzo23R) %>%
+leaflet(cantMarzorLimite60) %>%
   addTiles() %>%
   addAwesomeMarkers(lat = ~latitud, lng = ~longitud, icon=icons,
-             label = ~dsc_avenida
+             label = ~dsc_avenida,
+             popup = div(cantMarzorLimite60$cantMayorALimite)
              )
 
 
 ```
 
-<<<<<<< HEAD
-
-
-
-
-```{r getBarrio}
-library(httr)
-library(jsonlite)
-
-
-getBarrio <- function(lat, lng) {
-  url <- "https://maps.googleapis.com/maps/api/geocode/json"
-  api_key <- Sys.getenv("GOOGLE_KEY")
-  
-  params <- list(
-    latlng = paste(lat, lng, sep = ","),
-    key = api_key,
-    result_type = "neighborhood"
-  )
-  response <- GET(url, query = params)
-  
-  if (http_status(response)$category != "Success") {
-    stop("Error en la solicitud a la API de Google Maps")
-  }
-  
-  data <- content(response)
-  
-  if (data$status != "OK" || length(data$results) == 0) {
-    print(c(lat, lng))
-    
-    params <- list(
-      latlng = paste(lat, lng, sep = ","),
-      key = api_key
-    )
-    response <- GET(url, query = params)
-    data <- content(response)
-    print(data$results[[1]]$address_components[[3]]$long_name)
-    return(NA)
-  }
-  
-  barrio <- data$results[[1]]$address_components[[1]]$long_name
-  return(barrio)
-}
-
-
-```
-
-```{r Obtener los barrios, eval=FALSE}
-cant <- length(cantMarzorLimite60$latitud)
-
-# Obtener los barrios para cada par de coordenadas
-barrios <- sapply(1:cant, function(i) {
-  getBarrio(cantMarzorLimite60$latitud[i], cantMarzorLimite60$longitud[i])
-})
-
-# Asignar los barrios al dataframe
-(cantMarzorLimite60$Barrio <- barrios)
-```
-
 
 ## 2.¿Existe alguna correlación entre el volumen de tráfico y la velocidad promedio en las avenidas de Montevideo?
-
 
 ```{r Importar velocidad - fecha - volumen - avenida }
 (
@@ -247,8 +247,6 @@ FROM promedios_marzo_23
 
 ```
 
-
-
 ```{r}
 promediosMarzo23 %>% 
   ggplot(
@@ -261,54 +259,9 @@ promediosMarzo23 %>%
   facet_wrap(~year_actual) +
   scale_x_continuous(name = "Velocidad Media Anual") +
   scale_y_continuous(name = "Volumen de Vehiculos Medio Anual") 
-  theme()
+  theme(aspect.ratio = 1)
   
     
-=======
-```{r}
-library(httr)
-library(jsonlite)
-
-
-getBarrio <- function(lat, lng) {
-  url <- "https://maps.googleapis.com/maps/api/geocode/json"
-  api_key <- Sys.getenv("GOOGLE_KEY")
-  
-  params <- list(
-    latlng = paste(lat, lng, sep = ","),
-    key = api_key,
-    result_type = "neighborhood"
-  )
-  response <- GET(url, query = params)
-  barrio <- content(response)$results[[1]]$address_components[[1]]$long_name
-  return(barrio)
-}
-
-
 ```
 
-```{r Obtener los barrios}
-
-# Obtener los barrios para cada par de coordenadas
-barrios <- sapply(1:1, function(i) {
-  getBarrio(cantMarzorLimite60$lat[i], cantMarzorLimite60$lng[i])
-})
-
-# Asignar los barrios al dataframe
-cantMarzorLimite60$Barrio <- barrios
-
-```
-
-
-```{r}
-resultados <- promedios_velocidad_marzo23 %>%
-  dplyr::group_by(latitud, longitud) %>%
-  dplyr::summarize(num_dsc_avenida = n_distinct(dsc_avenida))
-
-(elementos_diferentes <- resultados[resultados$num_dsc_avenida > 1, ])
->>>>>>> 4ec0383f4840c201a73144b5fe86c716aa977ea8
-```
 El grafico no muestra una relacion aparente entre los promedios de las variables
-
-
-

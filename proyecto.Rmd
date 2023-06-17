@@ -56,22 +56,42 @@ for (i in tablas){
 )
 ```
 
+```{r}
+d_
+```
+
+
 ```{r NA's en d_sensores$barrio}
 
 d_sensores %>% select(barrio) %>% summarise( NAs = sum(is.na(barrio)))
 
 ```
 
-```{r Mapa De Sensores}
-library(leaflet)
 
-(
-  map <- leaflet() %>%
-  addTiles() %>%
-  addMarkers(data = d_sensores, lat = ~latitud, lng = ~longitud,
-             label = ~paste(dsc_avenida, " - ", dsc_int_anterior, " - ", dsc_int_siguiente),
-             clusterOptions = markerClusterOptions())
-)
+```{r Mapa y Funciones para mapa}
+mvd_map <- st_read(here::here("./ine_barrios/ine_barrios_mvd_nbi85.shp"))
+
+transformarCoord <- function(lat, lon, mvd_map){
+  puntos_lat_lng <- data.frame(lng = lon, lat = lat)
+  puntos_sf <- st_as_sf(puntos_lat_lng, coords = c("lng", "lat"), crs = 4326)
+  puntos_transformados <- st_transform(puntos_sf, crs = st_crs(mvd_map))
+  return(puntos_transformados)
+}
+```
+
+
+
+```{r Mapa De Sensores}
+puntos_sensores <- d_sensores %>% 
+  select(latitud, longitud) %>%
+  mutate(puntos_transformados = transformarCoord(latitud, longitud, mvd_map))
+
+mvd_map %>%
+  ggplot() + 
+  geom_sf(colour = "grey75", size = 0.07) +
+  geom_sf(data = puntos_sensores$puntos_transformados, color = "red", size = 1) +
+  labs(title = "Mapa de la ubicacion de los sensores")
+
 
 ```
 
@@ -120,11 +140,72 @@ velocidadBarrioMedia %>% ggplot(
 
 ```
 
-```{r Mapa de los barrios segun velocidad media}
+```{r Mapa de MVD en ggplot2}
 
-mvd_map <- st_read(here::here("./")
+
 
 ```
+
+
+
+```{r Funcion para encontrar el barrio}
+library(sf)
+
+
+
+
+encontrar_barrio <- function(lat, lon, mvd_map) {
+  # Convertir las coordenadas geográficas a un objeto espacial sf
+  puntos_transformados <- transformarCoord(lat, lon, mvd_map)
+
+  # Encontrar el barrio que contiene el punto
+  ls_contains <- st_contains(mvd_map$geometry, puntos_transformados$geometry)
+  indice_barrio <- which(as.logical(ls_contains))[1]
+  matching_barrios <- mvd_map[indice_barrio, ]
+
+  # Obtener el nombre del barrio
+  barrio <- matching_barrios$NOMBBARR
+
+  # Retornar el nombre del barrio
+  return(barrio)
+}
+```
+
+
+```{r}
+puntos <- data.frame(
+  lat = c(-34.86988, -34.87866, -34.87491, -34.89415),
+  lon = c(-56.13489, -56.14714, -56.14017, -56.16750)
+)
+
+# Obtener el nombre del barrio para cada punto
+for (i in 1:nrow(puntos)) {
+  barrio <- encontrar_barrio(puntos$lat[i], puntos$lon[i], mvd_map)
+  print(paste("El punto", i, "se encuentra en el barrio:", barrio))
+}
+
+#[1] "El punto 1 se encuentra en el barrio: Union"
+#[1] "El punto 2 se encuentra en el barrio: Union"
+#[1] "El punto 3 se encuentra en el barrio: Union"
+#[1] "El punto 4 se encuentra en el barrio: Tres Cruces"
+```
+
+
+
+```{r Mapa con velocidad media por barrio}
+
+(
+  mvd_map_velocidad_media <- mvd_map %>%
+    left_join(velocidadBarrioMedia,
+            by = c("NOMBBARR" = "barrio"))
+)
+
+mvd_map_velocidad_media %>%
+  ggplot(aes(fill = promedio_velocidad)) + 
+  geom_sf(colour = "grey75", size = 0.07)
+
+```
+
 
 
 

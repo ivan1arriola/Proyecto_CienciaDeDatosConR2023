@@ -13,6 +13,7 @@ library(tidyverse)
 library(DBI)
 library(RPostgres)
 library(sf)
+library(leaflet)
 ```
 
 ```{r Variables de Entorno, eval=FALSE, echo=FALSE}
@@ -56,11 +57,6 @@ for (i in tablas){
 )
 ```
 
-```{r}
-d_
-```
-
-
 ```{r NA's en d_sensores$barrio}
 
 d_sensores %>% select(barrio) %>% summarise( NAs = sum(is.na(barrio)))
@@ -73,8 +69,11 @@ mvd_map <- st_read(here::here("./ine_barrios/ine_barrios_mvd_nbi85.shp"))
 
 transformarCoord <- function(lat, lon, mvd_map){
   puntos_lat_lng <- data.frame(lng = lon, lat = lat)
-  puntos_sf <- st_as_sf(puntos_lat_lng, coords = c("lng", "lat"), crs = 4326)
-  puntos_transformados <- st_transform(puntos_sf, crs = st_crs(mvd_map))
+  puntos_sf <- st_as_sf(puntos_lat_lng,
+                        coords = c("lng", "lat"),
+                        crs = 4326)
+  puntos_transformados <- st_transform(puntos_sf,
+                                       crs = st_crs(mvd_map))
   return(puntos_transformados)
 }
 ```
@@ -123,10 +122,10 @@ mvd_map %>%
 ```
 
 ```{r}
-velocidadBarrioMedia %>% ggplot(
-      aes(
-          y = promedio_velocidad,
-          x= fct_reorder(barrio, promedio_velocidad)
+velocidadBarrioMedia %>% 
+  filter(barrio != 'NA') %>% 
+  ggplot(aes(y = promedio_velocidad,
+             x= fct_reorder(barrio, promedio_velocidad)
         )
     ) +
   geom_col() +
@@ -140,26 +139,15 @@ velocidadBarrioMedia %>% ggplot(
 
 ```
 
-```{r Mapa de MVD en ggplot2}
-
-
-
-```
-
-
 
 ```{r Funcion para encontrar el barrio}
-library(sf)
-
-
-
-
 encontrar_barrio <- function(lat, lon, mvd_map) {
   # Convertir las coordenadas geográficas a un objeto espacial sf
   puntos_transformados <- transformarCoord(lat, lon, mvd_map)
 
   # Encontrar el barrio que contiene el punto
-  ls_contains <- st_contains(mvd_map$geometry, puntos_transformados$geometry)
+  ls_contains <- st_contains(mvd_map$geometry,
+                             puntos_transformados$geometry)
   indice_barrio <- which(as.logical(ls_contains))[1]
   matching_barrios <- mvd_map[indice_barrio, ]
 
@@ -193,17 +181,16 @@ for (i in 1:nrow(puntos)) {
 
 
 ```{r Mapa con velocidad media por barrio}
-
 (
   mvd_map_velocidad_media <- mvd_map %>%
     left_join(velocidadBarrioMedia,
-            by = c("NOMBBARR" = "barrio"))
+              by = c("NOMBBARR" = "barrio"))
 )
 
 mvd_map_velocidad_media %>%
   ggplot(aes(fill = promedio_velocidad)) + 
-  geom_sf(colour = "grey75", size = 0.07)
-
+  geom_sf(colour = "grey75", size = 0.07) +
+  scale_color_paletteer_c(palette = "viridis::plasma")
 ```
 
 
@@ -240,8 +227,7 @@ Para responder a esta pregunta, necesito determinar en que intervalo de tiempo v
         d_date 
         ON 
           fct_registros.id_fecha = d_date.id_fecha
-      WHERE d_date.mmyyyy = '102021'
-
+      LIMIT 10000    
     "
   )
 )
@@ -261,6 +247,24 @@ cantMarzorLimite60 <- promedios_velocidad_marzo23 %>%
 )
 
 ```
+
+```{r, Calles con mayor promedio}
+
+promedios_velocidad_marzo23 %>%
+  group_by(dsc_avenida) %>%
+  summarise(velocidad_promedio = round(mean(velocidad), 3)) %>%
+  filter(velocidad_promedio > 40) %>%
+  ggplot() +
+  geom_col(
+    aes(x = velocidad_promedio,
+        y = reorder(dsc_avenida, velocidad_promedio)
+        )
+    ) +
+  scale_x_continuous(name = "Velocidad promedio") +
+  scale_y_discrete(name = "Calles")
+
+```
+
 
 ```{r Mapa de las observaciones}
 
@@ -284,7 +288,7 @@ icons <- awesomeIcons(
 
 leaflet(cantMarzorLimite60) %>%
   addTiles() %>%
-  addAwesomeMarkers(lat = ~latitud, lng = ~longitud, icon=icons,
+  addAwesomeMarkers(lat = ~latitud, lng = ~longitud, icon = icons,
              label = ~dsc_avenida,
              popup = div(cantMarzorLimite60$cantMayorALimite)
              )

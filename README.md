@@ -2,17 +2,23 @@
 
 Proyecto de Ciencia De Datos
 
-## Posibles Datos Para Investigacion
+## Preguntas de Investigación
+
+-   ¿Influye el barrio con la velocidad a la que van los vehículos?
+-   ¿Existe alguna correlación entre el volumen de tráfico y la velocidad promedio en las avenidas de Montevideo?
+-   ¿Existen diferencias en el volumen de tráfico y la velocidad promedio entre días laborales y fines de semana?
+-   ¿Cuáles son las avenidas con los mayores promedios de velocidad en Montevideo?
+
+## Datos Para Investigacion
 
 -   [Conteo vehicular en las principales avenidas de Montevideo](https://catalogodatos.gub.uy/dataset/intendencia-montevideo-conteo-de-vehiculos-del-centro-de-gestion-de-la-movilidad)
 -   [Velocidad promedio vehicular en las principales avenidas de Montevideo](https://catalogodatos.gub.uy/dataset/intendencia-montevideo-velocidad-promedio-vehicular-en-las-principales-avenidas-de-montevideo)
-
 - [Ubicación de sensores de medición de conteo vehículos](https://catalogodatos.gub.uy/dataset/intendencia-montevideo-ubicacion-de-sensores-de-medicion-de-conteo-vehiculos)
 
-## Observaciones
+### Observaciones
 Los datos son mensuales. Van desde Enero 2021 hasta Abril 2023.
 
-## Descripcion de variables
+### Descripcion de variables
 
 **Conjunto de datos: Conteo vehicular en las principales avenidas de Montevideo**
 
@@ -50,13 +56,8 @@ Los datos son mensuales. Van desde Enero 2021 hasta Abril 2023.
 - `latitud`: Float - Coordenada que indica la latitud de la ubicación del sensor.
 - `longitud`: Float - Coordenada que indica la longitud de la ubicación del sensor.
 
-## Posible Google Api a utilizar
-[Google Geocoding Documentacion](https://developers.google.com/maps/documentation/geocoding/requests-reverse-geocoding?hl=es-419)
+## Mapa de Montevideo
+El mapa se consiguio de este [repositorio](https://github.com/tereom/taller-mapas-mv/)
 
 
-## Posibles Preguntas de Investigación
 
--   ¿Influye el barrio con la velocidad a la que van los vehículos?
--   ¿Existe alguna correlación entre el volumen de tráfico y la velocidad promedio en las avenidas de Montevideo?
--   ¿Existen diferencias en el volumen de tráfico y la velocidad promedio entre días laborales y fines de semana?
--   ¿Cuáles son las avenidas con los mayores promedios de velocidad en Montevideo?

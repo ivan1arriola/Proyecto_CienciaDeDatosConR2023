@@ -9,6 +9,7 @@ library(dplyr)
 library(DBI)
 library(RPostgres)
 library(sf)
+library(geouy)
 source(here::here("utils.R"))
 
 con <- DBI::dbConnect(
@@ -25,7 +26,7 @@ d_sensores <- DBI::dbGetQuery(
   "SELECT * FROM d_sensores"
 )
 
-mvd_map <- st_read(here::here("./ine_barrios/ine_barrios_mvd_nbi85.shp"))
+mvd_map <- geouy::load_geouy("Barrios")
 
 #Agregar columna barrio a la tabla
 

@@ -4,16 +4,14 @@ output: html_document
 date: "2023-06-14"
 ---
 
-## De donde sacamos la informacion
-Mapas - https://github.com/tereom/taller-mapas-mv/
-
-
 ```{r Librerias , message=FALSE}
 library(tidyverse)
 library(DBI)
 library(RPostgres)
 library(sf)
 library(leaflet)
+library(paletteer)
+library(geouy)
 source(here::here("utils.R"))
 ```
 
@@ -68,15 +66,6 @@ d_sensores %>% select(barrio) %>% summarise( NAs = sum(is.na(barrio)))
 ```{r Mapa y Funciones para mapa}
 mvd_map <- st_read(here::here("./ine_barrios/ine_barrios_mvd_nbi85.shp"))
 
-transformarCoord <- function(lat, lon, mvd_map){
-  puntos_lat_lng <- data.frame(lng = lon, lat = lat)
-  puntos_sf <- st_as_sf(puntos_lat_lng,
-                        coords = c("lng", "lat"),
-                        crs = 4326)
-  puntos_transformados <- st_transform(puntos_sf,
-                                       crs = st_crs(mvd_map))
-  return(puntos_transformados)
-}
 ```
 
 
@@ -92,8 +81,23 @@ mvd_map %>%
   geom_sf(data = puntos_sensores$puntos_transformados, color = "red", size = 1) +
   labs(title = "Mapa de la ubicacion de los sensores")
 
+library(leaflet)
+
+mvd_map_coord <- sf::st_transform(mvd_map, crs = 4326)
+
+(
+  map <- leaflet() %>%
+  addTiles() %>%
+  addPolygons(data=mvd_map_coord) %>% 
+  addMarkers(data = d_sensores, lat = ~latitud, lng = ~longitud,
+             label = ~paste(dsc_avenida, " - ", dsc_int_anterior, " - ", dsc_int_siguiente)
+             )
+)
+
 
 ```
+Agregar grafico con la cantidad de sensores
+Alternativa plotly
 
 # Preguntas de Investigación
 
@@ -106,7 +110,7 @@ mvd_map %>%
 
 ```{r Importar velocidad - barrio  }
 (
-  velocidadBarrioMedia <- DBI::dbGetQuery(
+  velocidadxBarrioMax <- DBI::dbGetQuery(
     con,
     "
     SELECT
@@ -123,7 +127,7 @@ mvd_map %>%
 ```
 
 ```{r}
-velocidadBarrioMedia %>% 
+velocidadxBarrioMax %>% 
   filter(barrio != 'NA') %>% 
   ggplot(aes(y = promedio_velocidad,
              x= fct_reorder(barrio, promedio_velocidad)
@@ -150,7 +154,7 @@ velocidadBarrioMedia %>%
 ```{r Mapa con velocidad media por barrio}
 (
   mvd_map_velocidad_media <- mvd_map %>%
-    left_join(velocidadBarrioMedia,
+    left_join(velocidadxBarrioMax,
               by = c("NOMBBARR" = "barrio"))
 )
 
@@ -160,41 +164,30 @@ mvd_map_velocidad_media %>%
   scale_fill_paletteer_c(palette = "viridis::plasma")
 ```
 
-
-
-
-
-
-
-
-
-
 ## 4 - ¿Cuáles son las avenidas con los mayores promedios de velocidad en Montevideo?
 
 Para responder a esta pregunta, necesito determinar en que intervalo de tiempo voy a considerar el promedio. Ahora como primer acercamiento a los datos, me interesa determinar el promedio de velocidades por radar (cual va a estar en una determinada avenida), en el periodo de *marzo 2023*.
 
 ```{r}
 (
-  promedios_velocidad_marzo23 <- DBI::dbGetQuery(
+  promedios_velocidad <- DBI::dbGetQuery(
     con,
     "
+    WITH query_name1  AS (
       SELECT
         fct_registros.velocidad, 
-        fct_registros.id_hora, 
-        d_sensores.dsc_avenida, 
-        d_date.mmyyyy, 
-        d_sensores.latitud, 
-        d_sensores.longitud
+        d_sensores.dsc_avenida
       FROM fct_registros
       LEFT JOIN 
         d_sensores 
         ON 
           fct_registros.id_detector = d_sensores.id_detector
-      LEFT JOIN 
-        d_date 
-        ON 
-          fct_registros.id_fecha = d_date.id_fecha
-      LIMIT 10000    
+    
+    )
+    Select count(velocidad) where velocidad >60
+    GROUP BY dsc_avenida
+    FROM query_name1 
+      
     "
   )
 )
@@ -206,8 +199,8 @@ Ahora quiero visualizar en que partes de montevideo fueron observados estos dato
 ```{r Cantidad de veces que se paso el limite de 60km/h en Marzo 2023 x Sensor}
 (
 cantMarzorLimite60 <- promedios_velocidad_marzo23 %>% 
-  select(dsc_avenida, latitud, longitud, velocidad) %>% 
-  group_by(dsc_avenida, latitud, longitud) %>% 
+  select(dsc_avenida,velocidad) %>% 
+  group_by(dsc_avenida) %>% 
   summarise(
     cantMayorALimite = sum(velocidad > 60)
   ) %>% arrange(desc(cantMayorALimite))

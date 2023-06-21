@@ -14,6 +14,7 @@ library(DBI)
 library(RPostgres)
 library(sf)
 library(leaflet)
+source(here::here("utils.R"))
 ```
 
 ```{r Variables de Entorno, eval=FALSE, echo=FALSE}
@@ -140,43 +141,9 @@ velocidadBarrioMedia %>%
 ```
 
 
-```{r Funcion para encontrar el barrio}
-encontrar_barrio <- function(lat, lon, mvd_map) {
-  # Convertir las coordenadas geográficas a un objeto espacial sf
-  puntos_transformados <- transformarCoord(lat, lon, mvd_map)
-
-  # Encontrar el barrio que contiene el punto
-  ls_contains <- st_contains(mvd_map$geometry,
-                             puntos_transformados$geometry)
-  indice_barrio <- which(as.logical(ls_contains))[1]
-  matching_barrios <- mvd_map[indice_barrio, ]
-
-  # Obtener el nombre del barrio
-  barrio <- matching_barrios$NOMBBARR
-
-  # Retornar el nombre del barrio
-  return(barrio)
-}
-```
 
 
-```{r}
-puntos <- data.frame(
-  lat = c(-34.86988, -34.87866, -34.87491, -34.89415),
-  lon = c(-56.13489, -56.14714, -56.14017, -56.16750)
-)
 
-# Obtener el nombre del barrio para cada punto
-for (i in 1:nrow(puntos)) {
-  barrio <- encontrar_barrio(puntos$lat[i], puntos$lon[i], mvd_map)
-  print(paste("El punto", i, "se encuentra en el barrio:", barrio))
-}
-
-#[1] "El punto 1 se encuentra en el barrio: Union"
-#[1] "El punto 2 se encuentra en el barrio: Union"
-#[1] "El punto 3 se encuentra en el barrio: Union"
-#[1] "El punto 4 se encuentra en el barrio: Tres Cruces"
-```
 
 
 
@@ -190,7 +157,7 @@ for (i in 1:nrow(puntos)) {
 mvd_map_velocidad_media %>%
   ggplot(aes(fill = promedio_velocidad)) + 
   geom_sf(colour = "grey75", size = 0.07) +
-  scale_color_paletteer_c(palette = "viridis::plasma")
+  scale_fill_paletteer_c(palette = "viridis::plasma")
 ```
 
 

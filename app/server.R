@@ -8,6 +8,11 @@
 #
 
 library(shiny)
+library(geouy)
+library(paletteer)
+
+
+mvd_map <- load_geouy('Barrios')
 
 con <- DBI::dbConnect(
   RPostgres::Postgres(),
@@ -17,17 +22,31 @@ con <- DBI::dbConnect(
   password = Sys.getenv("DB_PASS"),
   dbname = Sys.getenv("DB_NAME")
 )
+
+velocidadxBarrioMax <- DBI::dbGetQuery(
+  con,
+  "
+    SELECT
+      d_sensores.barrio,
+      MAX(fct_registros.velocidad) AS max_velocidad
+    FROM fct_registros
+    LEFT JOIN d_sensores ON fct_registros.id_detector = d_sensores.id_detector
+    GROUP BY d_sensores.barrio
+    "
+)
+
+
 server <- function(input, output, session) {
   
     output$map <- renderPlot({
       (
         mvd_map_velocidad_media <- mvd_map %>%
           left_join(velocidadxBarrioMax,
-                    by = c("NOMBBARR" = "barrio"))
+                    by = c("nombbarr" = "barrio"))
       )
       
       mvd_map_velocidad_media %>%
-        ggplot(aes(fill = promedio_velocidad)) + 
+        ggplot(aes(fill = max_velocidad)) + 
         geom_sf(colour = "grey75", size = 0.07) +
         scale_fill_paletteer_c("grDevices::Heat")
     })

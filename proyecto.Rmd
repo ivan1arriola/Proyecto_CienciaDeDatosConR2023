@@ -4,7 +4,7 @@ output: html_document
 date: "2023-06-14"
 ---
 
-```{r Librerias , message=FALSE}
+```{r Librerias , include = FALSE}
 library(tidyverse)
 library(DBI)
 library(RPostgres)
@@ -140,8 +140,6 @@ velocidadxBarrioMax %>%
   ) +
   scale_x_discrete(name = "Barrio") + 
   scale_y_continuous(name = "Promedio de Velocidad")
-  
-
 ```
 
 
@@ -184,8 +182,8 @@ Para responder a esta pregunta, necesito determinar en que intervalo de tiempo v
           fct_registros.id_detector = d_sensores.id_detector
     
     )
-    Select count(velocidad) where velocidad >60
-    GROUP BY dsc_avenida
+    SELECT COUNT(velocidad) WHERE velocidad >60
+    GROUP BY d_sensores.dsc_avenida
     FROM query_name1 
       
     "
@@ -222,6 +220,7 @@ promedios_velocidad_marzo23 %>%
     ) +
   scale_x_continuous(name = "Velocidad promedio") +
   scale_y_discrete(name = "Calles")
+
 
 ```
 
@@ -303,10 +302,14 @@ promediosMarzo23 %>%
   geom_point() + 
   facet_wrap(~year_actual) +
   scale_x_continuous(name = "Velocidad Media Anual") +
-  scale_y_continuous(name = "Volumen de Vehiculos Medio Anual") 
-  theme(aspect.ratio = 1)
-  
+  scale_y_continuous(name = "Volumen de Vehiculos Medio Anual") +
+  geom_smooth(method = lm)
     
+  
+promediosMarzo23 %>% group_by(year_actual) %>% 
+  summarise(
+    correlacion = cor(velocidad_media, volumen_media)
+  )
 ```
 
 El grafico no muestra una relacion aparente entre los promedios de las variables

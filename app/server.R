@@ -29,18 +29,17 @@ server <- function(input, output, session) {
       mvd_map_velocidad_media %>%
         ggplot(aes(fill = promedio_velocidad)) + 
         geom_sf(colour = "grey75", size = 0.07) +
-        scale_fill_paletteer_c(palette = "viridis::plasma")
+        scale_fill_paletteer_c("grDevices::Heat")
     })
     
-    output$uni <- renderTable({
-      cantMarzorLimite60 <- promedios_velocidad_marzo23 %>% 
+    output$uni <- renderDataTable({
+      promedios_velocidad_marzo23 %>% 
         select(dsc_avenida,velocidad) %>% 
         group_by(dsc_avenida) %>% 
         summarise(
           cantMayorALimite = sum(velocidad > 60)
         ) %>% arrange(desc(cantMayorALimite))
-      
-      print("cantMarzorLimite60")
+
     })
     
     output$multi <- renderPlot({})

@@ -64,7 +64,7 @@ d_sensores %>% select(barrio) %>% summarise( NAs = sum(is.na(barrio)))
 
 
 ```{r Mapa y Funciones para mapa}
-mvd_map <- st_read(here::here("./ine_barrios/ine_barrios_mvd_nbi85.shp"))
+mvd_map <- load_geouy("Barrios")
 
 ```
 
@@ -83,7 +83,7 @@ mvd_map %>%
 
 library(leaflet)
 
-mvd_map_coord <- sf::st_transform(mvd_map, crs = 4326)
+mvd_map_coord <- st_transform(mvd_map, crs = 4326)
 
 (
   map <- leaflet() %>%
@@ -108,6 +108,8 @@ Alternativa plotly
 
 ## 1 -  ¿Influye el barrio con la velocidad a la que van los vehículos?
 
+Grafico interactivo donde va contando la cantidad de gente que se pasa de cierta velocidad
+
 ```{r Importar velocidad - barrio  }
 (
   velocidadxBarrioMax <- DBI::dbGetQuery(
@@ -115,7 +117,7 @@ Alternativa plotly
     "
     SELECT
       d_sensores.barrio,
-      AVG(fct_registros.velocidad) AS promedio_velocidad
+      MAX(fct_registros.velocidad) AS max_velocidad
     FROM fct_registros
     LEFT JOIN d_sensores ON fct_registros.id_detector = d_sensores.id_detector
     GROUP BY d_sensores.barrio
@@ -129,8 +131,8 @@ Alternativa plotly
 ```{r}
 velocidadxBarrioMax %>% 
   filter(barrio != 'NA') %>% 
-  ggplot(aes(y = promedio_velocidad,
-             x= fct_reorder(barrio, promedio_velocidad)
+  ggplot(aes(y = max_velocidad,
+             x= fct_reorder(barrio, max_velocidad)
         )
     ) +
   geom_col() +
@@ -139,7 +141,7 @@ velocidadxBarrioMax %>%
     aspect.ratio = 1,
   ) +
   scale_x_discrete(name = "Barrio") + 
-  scale_y_continuous(name = "Promedio de Velocidad")
+  scale_y_continuous(name = "Maximos de Velocidad")
 ```
 
 
@@ -153,13 +155,13 @@ velocidadxBarrioMax %>%
 (
   mvd_map_velocidad_media <- mvd_map %>%
     left_join(velocidadxBarrioMax,
-              by = c("NOMBBARR" = "barrio"))
+              by = c("nombbarr" = "barrio"))
 )
 
 mvd_map_velocidad_media %>%
-  ggplot(aes(fill = promedio_velocidad)) + 
+  ggplot(aes(fill = max_velocidad)) + 
   geom_sf(colour = "grey75", size = 0.07) +
-  scale_fill_paletteer_c(palette = "viridis::plasma")
+  scale_fill_paletteer_c(palette = "grDevices::Heat")
 ```
 
 ## 4 - ¿Cuáles son las avenidas con los mayores promedios de velocidad en Montevideo?

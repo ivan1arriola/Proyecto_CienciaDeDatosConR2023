@@ -31,13 +31,18 @@ mvd_map <- geouy::load_geouy("Barrios")
 #Agregar columna barrio a la tabla
 
 d_sensores <- d_sensores %>%
-  select(-barrio) %>%
+  select(-barrio) 
+
+d_sensores <- d_sensores %>%
   mutate(barrio = sapply(1:nrow(.), function(i) {
-    encontrar_barrio(d_sensores[i, "latitud"], d_sensores[i, "longitud"], mvd_map)
+    latitud <- d_sensores[i, "latitud"]
+    longitud <- d_sensores[i, "longitud"]
+    return(encontrar_barrio(latitud, longitud , mvd_map))
   }))
 
 
 query <- "UPDATE d_sensores SET barrio = $1 WHERE id_detector = $2"
 for (i in 1:nrow(d_sensores)) {
+  print(paste(i, "- Insertando ", d_sensores[i, 2]))
   DBI::dbExecute(con, query, list(d_sensores$barrio[i], d_sensores$id_detector[i]))
 }

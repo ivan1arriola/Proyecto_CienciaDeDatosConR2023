@@ -313,3 +313,16 @@ promediosMarzo23 %>% group_by(year_actual) %>%
 ```
 
 El grafico no muestra una relacion aparente entre los promedios de las variables
+
+
+
+
+
+
+
+
+
+
+
+
+

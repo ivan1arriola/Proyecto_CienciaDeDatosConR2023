@@ -12,7 +12,14 @@ library(sf)
 library(leaflet)
 library(paletteer)
 library(geouy)
+library(spdep)
+library(leaflet)
 source(here::here("utils.R"))
+```
+
+```{r}
+
+
 ```
 
 ```{r Variables de Entorno, eval=FALSE, echo=FALSE}
@@ -33,80 +40,87 @@ con <- DBI::dbConnect(
 ```
 
 ```{r Tablas de la base de datos}
-# Obtener las tablas de la base de datos
-(tablas <- DBI::dbListTables(con) )
+# Obtener nombres de las tablas de la base de datos
+tablas <- DBI::dbListTables(con)
 
 # Obtener las variables de las tablas
 for (i in tablas){
   cant <- dbGetQuery(con, paste("Select count(*) from", i ))[1,1]
-  cat(i, "cant : ")
-  print(cant)
+  print(paste("Tabla: ", i))
+  print(paste("Cantidad de datos: ", cant))
+  print("Varibales de la tabla:")
   print(DBI::dbListFields(con, name = i))
-  cat("\n")
+  cat("\n", "\n")
 }
 
 ```
-
-```{r d_sensores}
-(
-  d_sensores <- DBI::dbGetQuery(
+```{r Cargar Mapas , sensores, semaforos, message=FALSE}
+d_sensores <- DBI::dbGetQuery(
   con,
   "SELECT * FROM d_sensores"
   )
-)
-```
-
-```{r NA's en d_sensores$barrio}
-
-d_sensores %>% select(barrio) %>% summarise( NAs = sum(is.na(barrio)))
-
-```
-
-
-```{r Mapa y Funciones para mapa}
 mvd_map <- load_geouy("Barrios")
-
-```
-
-
-
-```{r Mapa De Sensores}
+mvd_map_fixed <- st_make_valid(st_transform(mvd_map, crs = 4326))
 puntos_sensores <- d_sensores %>% 
   select(latitud, longitud) %>%
   mutate(puntos_transformados = transformarCoord(latitud, longitud, mvd_map))
+capaSemafotos <- st_read(here::here("v_int_semaforos", "v_int_semaforos.shp"))
 
-mvd_map %>%
-  ggplot() + 
-  geom_sf(colour = "grey75", size = 0.07) +
-  geom_sf(data = puntos_sensores$puntos_transformados, color = "red", size = 1) +
-  labs(title = "Mapa de la ubicacion de los sensores")
+```
 
-library(leaflet)
 
-mvd_map_coord <- st_transform(mvd_map, crs = 4326)
 
+
+```{r Visualizacion de los elementos geolocalizables de los datos}
+# Crear una paleta de colores discreta, usando una funcion que indica como colorear para evitar
+# que queden 
+colores <- colorFactor(
+  palette = "Set1", 
+  domain = nacol(mvd_map_fixed)
+)
+
+# Crear el mapa interactivo con una capa de polígonos
 (
   map <- leaflet() %>%
   addTiles() %>%
-  addPolygons(data=mvd_map_coord) %>% 
-  addMarkers(data = d_sensores, lat = ~latitud, lng = ~longitud,
-             label = ~paste(dsc_avenida, " - ", dsc_int_anterior, " - ", dsc_int_siguiente)
-             )
+  addPolygons(
+    data=mvd_map_fixed,
+    weight = 5,
+    opacity = 0.5,
+    fill = TRUE,
+    fillColor = ~colores(nacol(mvd_map_fixed)),
+    popup = NULL,
+    popupOptions = NULL,
+    label = ~stringr::str_to_title(nombbarr) 
+  ) %>% 
+  addMarkers(
+    data = d_sensores, 
+    lat = ~latitud, 
+    lng = ~longitud,
+    label = ~paste(dsc_avenida, " - ", dsc_int_anterior, " - ", dsc_int_siguiente)
+  ) %>% 
+  addCircleMarkers(
+    data = st_transform(capaSemafotos, crs = 4326), 
+    color = "red", 
+    radius = 3)
 )
 
-
 ```
-Agregar grafico con la cantidad de sensores
-Alternativa plotly
+
 
 # Preguntas de Investigación
 
 1.  ¿Influye el barrio con la velocidad a la que van los vehículos?
+
 2.  ¿Existe alguna correlación entre el volumen de tráfico y la velocidad promedio en las avenidas de Montevideo?
+
 3.  ¿Existen diferencias en el volumen de tráfico y la velocidad promedio entre días laborales y fines de semana?
+
 4.  ¿Cuáles son las avenidas con los marzores promedios de velocidad en Montevideo?
 
-## 1 -  ¿Influye el barrio con la velocidad a la que van los vehículos?
+5.  **nueva** ¿Como afecta la presencia de semaforo a los indicadores de volumen y velocidad?
+
+## 1 - ¿Influye el barrio con la velocidad a la que van los vehículos?
 
 Grafico interactivo donde va contando la cantidad de gente que se pasa de cierta velocidad
 
@@ -143,13 +157,6 @@ velocidadxBarrioMax %>%
   scale_x_discrete(name = "Barrio") + 
   scale_y_continuous(name = "Maximos de Velocidad")
 ```
-
-
-
-
-
-
-
 
 ```{r Mapa con velocidad media por barrio}
 (
@@ -226,7 +233,6 @@ promedios_velocidad_marzo23 %>%
 
 ```
 
-
 ```{r Mapa de las observaciones}
 
 div <- function(cantMayorALimite) {
@@ -256,7 +262,6 @@ leaflet(cantMarzorLimite60) %>%
 
 
 ```
-
 
 ## 2.¿Existe alguna correlación entre el volumen de tráfico y la velocidad promedio en las avenidas de Montevideo?
 
@@ -315,16 +320,3 @@ promediosMarzo23 %>% group_by(year_actual) %>%
 ```
 
 El grafico no muestra una relacion aparente entre los promedios de las variables
-
-
-
-
-
-
-
-
-
-
-
-
-

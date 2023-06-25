@@ -9,6 +9,8 @@ transformarCoord <- function(lat, lon, mvd_map){
                                        crs = st_crs(mvd_map))
   return(puntos_transformados)
 }
+print("transformarCoord loaded")
+
 
 encontrar_barrio <- function(lat, lon, mvd_map) {
   # Convertir las coordenadas geográficas a un objeto espacial sf
@@ -26,3 +28,34 @@ encontrar_barrio <- function(lat, lon, mvd_map) {
   # Retornar el nombre del barrio
   return(barrio)
 }
+print("encontrar_barrio loaded")
+
+# Cargar las bibliotecas spdep y leaflet
+library(spdep)
+
+# Definir una función personalizada para colorear polígonos
+nacol <- function(spdf) {
+  resample <- function(x, ...) x[sample.int(length(x), ...)]
+  nunique <- function(x) {unique(x[!is.na(x)])}
+  np = nrow(spdf)
+  adjl = spdep::poly2nb(spdf)
+  cols = rep(NA, np)
+  cols[1]=1
+  nextColour = 2
+  for (k in 2:np) {
+    adjcolours = nunique(cols[adjl[[k]]])
+    if (length(adjcolours)==0) {
+      cols[k]=resample(cols[!is.na(cols)],1)
+    }else {
+      avail = setdiff(nunique(cols), nunique(adjcolours))
+      if (length(avail)==0) {
+        cols[k]=nextColour
+        nextColour=nextColour+1
+      }else {
+        cols[k]=resample(avail,size=1)
+      }
+    }
+  }
+  return(cols)
+}
+print("nacol loaded")

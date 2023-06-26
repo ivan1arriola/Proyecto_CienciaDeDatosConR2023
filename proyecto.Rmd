@@ -175,7 +175,7 @@ mvd_map_velocidad_media %>%
 
 Para responder a esta pregunta, necesito determinar en que intervalo de tiempo voy a considerar el promedio. Ahora como primer acercamiento a los datos, me interesa determinar el promedio de velocidades por radar (cual va a estar en una determinada avenida), en el periodo de *marzo 2023*.
 
-```{r}
+```{r, eval=FALSE}
 (
   promedios_velocidad <- DBI::dbGetQuery(
     con,
@@ -203,7 +203,7 @@ Para responder a esta pregunta, necesito determinar en que intervalo de tiempo v
 
 Ahora quiero visualizar en que partes de montevideo fueron observados estos datos
 
-```{r Cantidad de veces que se paso el limite de 60km/h en Marzo 2023 x Sensor}
+```{r, eval=FALSE}
 (
 cantMarzorLimite60 <- promedios_velocidad_marzo23 %>% 
   select(dsc_avenida,velocidad) %>% 
@@ -215,7 +215,7 @@ cantMarzorLimite60 <- promedios_velocidad_marzo23 %>%
 
 ```
 
-```{r, Calles con mayor promedio}
+```{r,eval=FALSE}
 
 promedios_velocidad_marzo23 %>%
   group_by(dsc_avenida) %>%
@@ -233,7 +233,7 @@ promedios_velocidad_marzo23 %>%
 
 ```
 
-```{r Mapa de las observaciones}
+```{r,eval=FALSE}
 
 div <- function(cantMayorALimite) {
   paste0("<div>", cantMayorALimite, "</div>")

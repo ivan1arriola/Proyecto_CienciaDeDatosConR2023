@@ -17,11 +17,6 @@ library(leaflet)
 source(here::here("utils.R"))
 ```
 
-```{r}
-
-
-```
-
 ```{r Variables de Entorno, eval=FALSE, echo=FALSE}
 usethis::edit_r_environ(
   scope = "project"

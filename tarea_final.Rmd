@@ -9,8 +9,25 @@ output: pdf_document
 knitr::opts_chunk$set(echo = FALSE)
 ```
 
+```{r instalar packages, include=FALSE}
+if (!require("here")) install.packages("here")
+if (!require("dplyr")) install.packages("dplyr")
+if (!require("ggplot2")) install.packages("ggplot2")
+if (!require("DBI")) install.packages("DBI")
+if (!require("RPostgres")) install.packages("RPostgres")
+if (!require("sf")) install.packages("sf")
+if (!require("leaflet")) install.packages("leaflet")
+if (!require("paletteer")) install.packages("paletteer")
+if (!require("geouy")) install.packages("geouy")
+if (!require("spdep")) install.packages("spdep")
+if (!require("leaflet")) install.packages("leaflet")
+
+```
+
 ```{r Librerias , include = FALSE}
-library(tidyverse)
+library(magrittr)
+library(dplyr)
+library(ggplot2)
 library(DBI)
 library(RPostgres)
 library(sf)
@@ -90,9 +107,70 @@ Los datos son mensuales. Van desde Enero 2021 hasta Abril 2023. Los datos de los
 
 Debido a que los datos utilizados, estan estrechamente relacionados y a su vez son sumamente masivos, hemos decidido utilizar una base de datos relacionales.
 
+```{r Coneccion a Base de Datos}
+con <- DBI::dbConnect(
+  RPostgres::Postgres(),
+  host = Sys.getenv("DB_HOST"),
+  port = Sys.getenv("DB_PORT"),
+  user = Sys.getenv("DB_USER"),
+  password = Sys.getenv("DB_PASS"),
+  dbname = Sys.getenv("DB_NAME")
+)
+```
+
 ![Diagrama de la base de datos](media/fct_registros.png "Diagrama de la base de datos"){width="300" height="600"}
 
 # Análisis exploratorio
+
+```{r Cargar Mapas , sensores, semaforos, message=FALSE}
+d_sensores <- DBI::dbGetQuery(
+  con,
+  "SELECT * FROM d_sensores"
+  )
+mvd_map <- load_geouy("Barrios")
+mvd_map_fixed <- st_make_valid(st_transform(mvd_map, crs = 4326))
+puntos_sensores <- d_sensores %>% 
+  select(barrio, latitud, longitud) %>%
+  mutate(transformarCoord(latitud, longitud, mvd_map))
+capaSemafotos <- st_read(here::here("v_int_semaforos", "v_int_semaforos.shp"))
+
+```
+
+## Mapa de los datos
+
+Los datos de los sensores no son de todos los barrios , sino que solamente alcanzan los siguientes barrios
+
+```{r Cantidad de sensores por barrio}
+(
+  cant_sensores <- d_sensores %>% group_by(barrio) %>% 
+    summarise(
+      cant_de_sensores = n()
+    ) %>% arrange(desc(cant_de_sensores))
+)
+```
+
+Y en un mapa tambien se puede visualizar
+
+```{r}
+
+mvd_map_sensores <- mvd_map_fixed %>% 
+  left_join(cant_sensores, by = c("nombbarr" = "barrio")) %>%
+  mutate(cant_de_sensores = ifelse(is.na(cant_de_sensores), 0, cant_de_sensores))
+
+ggplot() +
+  geom_sf(
+    data = mvd_map_sensores,
+    aes(
+      fill = ifelse(cant_de_sensores == 0, NA, cant_de_sensores)
+    )
+  )+
+  scale_fill_viridis_c(option = "plasma", name = "Cantidad de sensores por barrio") +
+  theme_void() +
+  theme(legend.position = "bottom")
+
+```
+
+\`\`\`
 
 ## Preguntas de investigación
 

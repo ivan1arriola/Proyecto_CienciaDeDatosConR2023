@@ -1,4 +1,6 @@
 library(sf)
+mvd_map <- load_geouy("Barrios")
+mvd_map_fixed <- st_make_valid(st_transform(mvd_map, crs = 4326))
 
 transformarCoord <- function(lat, lon, mvd_map){
   puntos_lat_lng <- data.frame(lng = lon, lat = lat)
@@ -59,3 +61,14 @@ nacol <- function(spdf) {
   return(cols)
 }
 print("nacol loaded")
+
+colores <- colorFactor(
+  palette = "Set1", 
+  domain = nacol(mvd_map_fixed)
+)
+
+
+semaforoIcon <- makeIcon(
+  iconUrl = here::here("media", "semaforo.png"),
+  iconWidth = 10, iconHeight = 13
+)

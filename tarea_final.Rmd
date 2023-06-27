@@ -1,0 +1,147 @@
+---
+title: "Tarea Final"
+author: "Arriola, Miquelerena, Rovetta"
+date: "`r Sys.Date()`"
+output: pdf_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = FALSE)
+```
+
+```{r Librerias , include = FALSE}
+library(tidyverse)
+library(DBI)
+library(RPostgres)
+library(sf)
+library(leaflet)
+library(paletteer)
+library(geouy)
+library(spdep)
+library(leaflet)
+source(here::here("app", "utils.R"))
+```
+
+```{r Variables de Entorno, eval=FALSE, echo=FALSE}
+usethis::edit_r_environ(
+  scope = "project"
+)
+```
+
+# Introducción
+
+Datos de trafico
+
+# Datos
+
+## Descripción general de los datos
+
+Los datos utilizados son estos
+
+-   [Conteo vehicular en las principales avenidas de Montevideo](https://catalogodatos.gub.uy/dataset/intendencia-montevideo-conteo-de-vehiculos-del-centro-de-gestion-de-la-movilidad)
+-   [Velocidad promedio vehicular en las principales avenidas de Montevideo](https://catalogodatos.gub.uy/dataset/intendencia-montevideo-velocidad-promedio-vehicular-en-las-principales-avenidas-de-montevideo)
+-   [Ubicación de sensores de medición de conteo vehículos](https://catalogodatos.gub.uy/dataset/intendencia-montevideo-ubicacion-de-sensores-de-medicion-de-conteo-vehiculos)
+-   [Semaforos](https://geoweb.montevideo.gub.uy/geonetwork/srv/spa/catalog.search#/metadata/d2da8cdd-c718-4eeb-9825-7069498b29c2)
+
+Todos provenientes de la intendencia de montevideo
+
+### Observaciones
+
+Los datos son mensuales. Van desde Enero 2021 hasta Abril 2023. Los datos de los semaforos son de septiembre del 2014
+
+### Descripcion de variables
+
+**Conjunto de datos: Conteo vehicular en las principales avenidas de Montevideo**
+
+-   `cod_detector`: Entero - ID de la cámara que monitorea un carril específico para detectar vehículos.
+-   `id_carril`: Entero - Número del carril monitoreado (1, 2, 3, ...).
+-   `fecha`: AAAA-MM-DD - Día en que se realizó la medición.
+-   `hora`: hh:mm:ss - Hora en que se realizó la medición.
+-   `dsc_avenida`: Texto - Nombre de la avenida donde se mide el tráfico.
+-   `dsc_int_anterior`: Texto - Nombre de la vía desde donde vienen los vehículos.
+-   `dsc_int_siguiente`: Texto - Nombre de la vía hacia donde se dirigen los vehículos.
+-   `latitud`: Float - Latitud del lugar de medición.
+-   `longitud`: Float - Longitud del lugar de medición.
+-   `volumen`: Entero - Cantidad de vehículos detectados en el carril en los últimos 5 minutos.
+-   `volumen_hora`: Entero - Cantidad de vehículos detectados en el carril en la última hora.
+
+**Conjunto de datos: Velocidad promedio vehicular en las principales avenidas de Montevideo**
+
+-   `cod_detector`: Entero - ID de la cámara que monitorea un carril específico para detectar vehículos.
+-   `id_carril`: Entero - Número del carril monitoreado (1, 2, 3, ...).
+-   `fecha`: AAAA-MM-DD - Día en que se realizó la medición.
+-   `hora`: hh:mm:ss - Hora en que se realizó la medición.
+-   `dsc_avenida`: Texto - Nombre de la avenida donde se mide el tráfico.
+-   `dsc_int_anterior`: Texto - Nombre de la vía desde donde vienen los vehículos.
+-   `dsc_int_siguiente`: Texto - Nombre de la vía hacia donde se dirigen los vehículos.
+-   `latitud`: Float - Latitud del lugar de medición.
+-   `longitud`: Float - Longitud del lugar de medición.
+-   `velocidad_promedio`: Entero - Promedio de las velocidades de los autos que circularon por el carril durante los últimos 5 minutos.
+
+**Conjunto de datos: Ubicación de sensores de medición de conteo vehículos**
+
+-   `dsc_avenida`: Texto - Nombre de la avenida donde se encuentra el sensor o cámara y donde se mide el tránsito.
+-   `dsc_int_anterior`: Texto - Nombre de la vía que forma el cruce desde donde vienen los vehículos.
+-   `dsc_int_siguiente`: Texto - Nombre de la vía que forma el cruce donde está el sensor. En general, el sensor se encuentra un poco antes de esta vía. El sentido de circulación será desde el cruce con `dsc_int_anterior` hacia el cruce con `dsc_int_siguiente`.
+-   `latitud`: Float - Coordenada que indica la latitud de la ubicación del sensor.
+-   `longitud`: Float - Coordenada que indica la longitud de la ubicación del sensor.
+
+## Base de Datos
+
+Debido a que los datos utilizados, estan estrechamente relacionados y a su vez son sumamente masivos, hemos decidido utilizar una base de datos relacionales.
+
+![Diagrama de la base de datos](media/fct_registros.png "Diagrama de la base de datos"){width="300" height="600"}
+
+# Análisis exploratorio
+
+## Preguntas de investigación
+
+1.  ¿Existe alguna correlación entre el volumen de tráfico y la velocidad promedio en las avenidas de Montevideo?
+2.  ¿Existen diferencias en el volumen de tráfico y la velocidad promedio entre días laborales y fines de semana?
+3.  ¿Cuáles son las avenidas con los mayores promedios de velocidad en Montevideo?
+
+## Resultados interesantes
+
+[Presentar los resultados más relevantes obtenidos durante el análisis exploratorio.]
+
+# Modelo estadístico
+
+## Variables
+
+[Describir la variable de respuesta y las variables explicativas utilizadas.]
+
+## Elección del modelo
+
+[Justificar la elección del modelo y explicar el proceso de selección.]
+
+## Ajuste y evaluación
+
+[Ajustar el modelo con el conjunto de entrenamiento y evaluarlo con el conjunto de prueba.]
+
+## Predicciones
+
+[Presentar las predicciones realizadas por el modelo.]
+
+## Interpretación de resultados
+
+[Interpretar los resultados obtenidos del modelo estadístico.]
+
+# Aplicación Shiny
+
+## Descripción
+
+[Describir la aplicación Shiny y cómo se diseñó para cumplir con los objetivos del proyecto.]
+
+## Enlace
+
+[Incluir el enlace a la aplicación Shiny alojada en el servidor de RStudio.]
+
+# Comentarios finales
+
+## Hallazgos principales
+
+[Resumir los principales hallazgos del proyecto.]
+
+## Posibles extensiones
+
+[Discutir posibles extensiones o mejoras para el proyecto.]

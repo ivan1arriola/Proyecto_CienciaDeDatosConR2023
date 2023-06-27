@@ -17,7 +17,7 @@ ui <- fluidPage(
         mainPanel(
           tabsetPanel(
             tabPanel("Mapa",
-                     plotOutput('map')),
+                     leafletOutput('map')),
             tabPanel("Univariado",
                      dataTableOutput('uni')),
             tabPanel("Multivariado",

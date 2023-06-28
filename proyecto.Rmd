@@ -134,8 +134,7 @@ colores <- colorFactor(
   ) %>% 
     addMarkers(
     data = st_transform(capaSemafotos, crs = 4326), 
-    icon= semaforoIcon,
-    opacity = 0.5,
+    icon= semaforoIcon
   ) %>% 
   addMarkers(
     data = d_sensores, 
@@ -155,6 +154,7 @@ Los circulos rojos son los semaforos
 ### Variacion del promedio de la velocidad por hora
 
 ```{r Datos de la velcidad por hora}
+
 
 velocidad_hora <- DBI::dbGetQuery(
   con,

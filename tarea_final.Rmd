@@ -105,6 +105,8 @@ Los datos son mensuales. Van desde Enero 2021 hasta Abril 2023. Los datos de los
 -   `latitud`: Float - Coordenada que indica la latitud de la ubicación del sensor.
 -   `longitud`: Float - Coordenada que indica la longitud de la ubicación del sensor.
 
+Sobre estos datos en particular, son *100 sensores* que se van cambiando de ubicacion mes a mes
+
 ## Base de Datos
 
 Debido a que los datos utilizados, estan estrechamente relacionados y a su vez son sumamente masivos, hemos decidido utilizar una base de datos relacionales.
@@ -237,9 +239,8 @@ ggplot() +
 ## Preguntas de investigación
 
 1.  ¿Existe alguna correlación entre el volumen de tráfico y la velocidad promedio en las avenidas de Montevideo?
-2.  ¿Existen diferencias en el volumen de tráfico y la velocidad promedio entre días laborales y fines de semana?
-3.  ¿Cuáles son las avenidas con los mayores promedios de velocidad en Montevideo?
-4. ¿Cómo va variando el volumen y velocidad medidos a traves de la semana?
+2.  ¿Cuáles son las avenidas con los mayores promedios de velocidad en Montevideo?
+3. ¿Cómo va variando el volumen y velocidad medidos a traves de la semana?
 
 ## ¿Cómo va variando el volumen y velocidad medidos a traves de la semana?
 

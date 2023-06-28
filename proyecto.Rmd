@@ -90,8 +90,7 @@ colores <- colorFactor(
   ) %>% 
     addMarkers(
     data = st_transform(capaSemafotos, crs = 4326), 
-    icon= semaforoIcon,
-    opacity = 0.5,
+    icon= semaforoIcon
   ) %>% 
   addMarkers(
     data = d_sensores, 
@@ -123,12 +122,13 @@ Grafico interactivo donde va contando la cantidad de gente que se pasa de cierta
 
 ```{r Importar velocidad - barrio  }
 (
-  velocidadxBarrioMax <- DBI::dbGetQuery(
+  velocidadMax_dia_barrio<- DBI::dbGetQuery(
     con,
     "
     SELECT
       d_sensores.barrio,
-      MAX(fct_registros.velocidad) AS max_velocidad
+      MAX(fct_registros.velocidad) AS max_velocidad,
+      d_date.day
     FROM fct_registros
     LEFT JOIN d_sensores ON fct_registros.id_detector = d_sensores.id_detector
     GROUP BY d_sensores.barrio

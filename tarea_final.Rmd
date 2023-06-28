@@ -9,21 +9,6 @@ output: pdf_document
 knitr::opts_chunk$set(echo = FALSE)
 ```
 
-```{r instalar packages, include=FALSE}
-if (!require("here")) install.packages("here")
-if (!require("dplyr")) install.packages("dplyr")
-if (!require("ggplot2")) install.packages("ggplot2")
-if (!require("DBI")) install.packages("DBI")
-if (!require("RPostgres")) install.packages("RPostgres")
-if (!require("sf")) install.packages("sf")
-if (!require("leaflet")) install.packages("leaflet")
-if (!require("paletteer")) install.packages("paletteer")
-if (!require("geouy")) install.packages("geouy")
-if (!require("spdep")) install.packages("spdep")
-if (!require("leaflet")) install.packages("leaflet")
-
-```
-
 ```{r Librerias , include = FALSE}
 library(magrittr)
 library(dplyr)
@@ -326,7 +311,47 @@ En el grafico se puede observar:
 -   La velocidad media se mantiene casi constante durante toda la semana, salvo una leve variacion positiva los fines de semana.
 -   El volumen medio de vehiculos detectados por los radares va variando en la semana, alcanzado su pico los viernes. Tambien es considerablemente inferior los fines de semana.
 
+```{r}
+(
+  maxVelocidad_diaSemana_barrio <- DBI::dbGetQuery(
+    con,
+    "
+      SELECT
+            d_sensores.barrio,
+            d_date.day_of_week,
+            MAX(fct_registros.velocidad) AS max_velocidad,
+            count(fct_registros.velocidad) AS cant_registros
+      FROM fct_registros
+          INNER JOIN d_sensores ON fct_registros.id_detector = d_sensores.id_detector
+          LEFT JOIN d_date on fct_registros.id_fecha = d_date.id_fecha
+      group by d_sensores.barrio, d_date.day_of_week
+    "
+  ) %>% mutate(
+    variacionConMedia = max_velocidad - mean(max_velocidad)
+  )
+)
+
 ```
+
+
+```{r}
+maxVelocidad_diaSemana_barrio %>%
+  ggplot(
+    aes(
+      x = barrio,
+      y = day_of_week,
+      fill = variacionConMedia
+    )
+  ) +
+  geom_tile(color = "white",
+            lwd = 1.5,
+            linetype = 1) +
+  coord_fixed() +
+  coord_flip()
+```
+La verdad que no veo nada interesante, mas alla que cerrito es muy dispar al resto
+
+
 
 
 

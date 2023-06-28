@@ -74,3 +74,19 @@ semaforoIcon <- makeIcon(
   iconUrl = here::here("media", "semaforo.png"),
   iconWidth = 10, iconHeight = 13
 )
+
+
+
+
+
+library(lubridate)
+
+intToHour <- function(int){
+  minExtract <- substring(int, first = nchar(int)-1)
+  hourExtract <- substring(int, first = 0, last = 2 )
+  hora_nueva <- data.frame(hourExtract, minExtract)  %>% mutate(hora_nueva= paste(hourExtract, minExtract, sep = ":"),
+                                               hora_nueva= lubridate::parse_date_time(hora_nueva, 'H:M'),
+                                               hora_nueva= format(strptime(hora_nueva, "%Y-%m-%d %H:%M:%S"), '%H:%M'))
+
+  return(hora_nueva)
+}

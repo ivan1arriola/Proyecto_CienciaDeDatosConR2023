@@ -14,7 +14,7 @@ library(paletteer)
 library(geouy)
 library(spdep)
 library(leaflet)
-source(here::here("app", "utils.R"))
+source(here::here("utils.R"))
 ```
 
 ```{r Variables de Entorno, eval=FALSE, echo=FALSE}
@@ -23,7 +23,7 @@ usethis::edit_r_environ(
 )
 ```
 
-```{r Coneccion a Base de Datos}
+```{r Coneccion a Base de Datos , echo=FALSE}
 con <- DBI::dbConnect(
   RPostgres::Postgres(),
   host = Sys.getenv("DB_HOST"),
@@ -34,7 +34,7 @@ con <- DBI::dbConnect(
 )
 ```
 
-```{r Tablas de la base de datos}
+```{r Tablas de la base de datos , echo=FALSE}
 # Obtener nombres de las tablas de la base de datos
 tablas <- DBI::dbListTables(con)
 
@@ -49,7 +49,7 @@ for (i in tablas){
 }
 
 ```
-```{r Cargar Mapas , sensores, semaforos, message=FALSE}
+```{r Cargar Mapas , sensores, semaforos, message=FALSE  , echo=FALSE}
 d_sensores <- DBI::dbGetQuery(
   con,
   "SELECT * FROM d_sensores"
@@ -66,7 +66,7 @@ capaSemafotos <- st_read(here::here("v_int_semaforos", "v_int_semaforos.shp"))
 
 
 
-```{r Visualizacion de los elementos geolocalizables de los datos}
+```{r Visualizacion de los elementos geolocalizables de los datos , echo=FALSE}
 # Crear una paleta de colores discreta, usando una funcion que indica como colorear para evitar
 # que queden 
 colores <- colorFactor(
@@ -88,17 +88,16 @@ colores <- colorFactor(
     popupOptions = NULL,
     label = ~stringr::str_to_title(nombbarr) 
   ) %>% 
-    addMarkers(
-    data = st_transform(capaSemafotos, crs = 4326), 
-    icon= semaforoIcon
-  ) %>% 
   addMarkers(
     data = d_sensores, 
     lat = ~latitud, 
     lng = ~longitud,
     label = ~paste(dsc_avenida, " - ", dsc_int_anterior, " - ", dsc_int_siguiente)
-  )
-  
+  ) %>% 
+  addCircleMarkers(
+    data = st_transform(capaSemafotos, crs = 4326), 
+    color = "red", 
+    radius = 3)
 )
 
 ```
@@ -120,15 +119,14 @@ colores <- colorFactor(
 
 Grafico interactivo donde va contando la cantidad de gente que se pasa de cierta velocidad
 
-```{r Importar velocidad - barrio  }
+```{r Importar velocidad - barrio   , echo=FALSE}
 (
-  velocidadMax_dia_barrio<- DBI::dbGetQuery(
+  velocidadxBarrioMax <- DBI::dbGetQuery(
     con,
     "
     SELECT
       d_sensores.barrio,
-      MAX(fct_registros.velocidad) AS max_velocidad,
-      d_date.day
+      MAX(fct_registros.velocidad) AS max_velocidad
     FROM fct_registros
     LEFT JOIN d_sensores ON fct_registros.id_detector = d_sensores.id_detector
     GROUP BY d_sensores.barrio
@@ -139,7 +137,7 @@ Grafico interactivo donde va contando la cantidad de gente que se pasa de cierta
 
 ```
 
-```{r}
+```{r , echo=FALSE}
 velocidadxBarrioMax %>% 
   filter(barrio != 'NA') %>% 
   ggplot(aes(y = max_velocidad,
@@ -155,7 +153,7 @@ velocidadxBarrioMax %>%
   scale_y_continuous(name = "Maximos de Velocidad")
 ```
 
-```{r Mapa con velocidad media por barrio}
+```{r Mapa con velocidad media por barrio , echo=FALSE}
 (
   mvd_map_velocidad_media <- mvd_map %>%
     left_join(velocidadxBarrioMax,
@@ -172,7 +170,7 @@ mvd_map_velocidad_media %>%
 
 Para responder a esta pregunta, necesito determinar en que intervalo de tiempo voy a considerar el promedio. Ahora como primer acercamiento a los datos, me interesa determinar el promedio de velocidades por radar (cual va a estar en una determinada avenida), en el periodo de *marzo 2023*.
 
-```{r, eval=FALSE}
+```{r, eval=FALSE , echo=FALSE}
 (
   promedios_velocidad <- DBI::dbGetQuery(
     con,
@@ -200,7 +198,7 @@ Para responder a esta pregunta, necesito determinar en que intervalo de tiempo v
 
 Ahora quiero visualizar en que partes de montevideo fueron observados estos datos
 
-```{r, eval=FALSE}
+```{r, eval=FALSE , echo=FALSE}
 (
 cantMarzorLimite60 <- promedios_velocidad_marzo23 %>% 
   select(dsc_avenida,velocidad) %>% 
@@ -212,7 +210,7 @@ cantMarzorLimite60 <- promedios_velocidad_marzo23 %>%
 
 ```
 
-```{r,eval=FALSE}
+```{r,eval=FALSE , echo=FALSE}
 
 promedios_velocidad_marzo23 %>%
   group_by(dsc_avenida) %>%
@@ -230,7 +228,7 @@ promedios_velocidad_marzo23 %>%
 
 ```
 
-```{r,eval=FALSE}
+```{r,eval=FALSE , echo=FALSE}
 
 div <- function(cantMayorALimite) {
   paste0("<div>", cantMayorALimite, "</div>")
@@ -262,7 +260,7 @@ leaflet(cantMarzorLimite60) %>%
 
 ## 2.¿Existe alguna correlación entre el volumen de tráfico y la velocidad promedio en las avenidas de Montevideo?
 
-```{r Importar velocidad - fecha - volumen - avenida }
+```{r Importar velocidad - fecha - volumen - avenida  , echo=FALSE}
 (
   promediosMarzo23 <- DBI::dbGetQuery(
     con,
@@ -295,7 +293,7 @@ FROM promedios_marzo_23
 
 ```
 
-```{r}
+```{r , echo=FALSE}
 promediosMarzo23 %>% 
   ggplot(
     aes(

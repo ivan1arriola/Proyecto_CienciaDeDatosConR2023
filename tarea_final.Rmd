@@ -23,6 +23,7 @@ library(paletteer)
 library(geouy)
 library(spdep)
 library(leaflet)
+library(lubridate)
 source(here::here("app", "utils.R"))
 ```
 
@@ -353,7 +354,60 @@ La verdad que no veo nada interesante, mas alla que cerrito es muy dispar al res
 
 
 
+## Variacion del promedio de la velocidad por hora
 
+```{r Datos de la velcidad por hora}
+
+
+velocidad_hora <- DBI::dbGetQuery(
+  con,
+  " WITH asd AS (
+      WITH velocidad_hora  AS (
+        SELECT
+          velocidad, 
+          id_hora
+        FROM fct_registros
+        ORDER BY id_hora
+      )
+      SELECT 
+        AVG(velocidad) as avg_velocidad,
+        MAX(velocidad) as max_velocidad,
+        id_hora as hora
+      FROM velocidad_hora
+      GROUP BY id_hora
+  )
+  select *,
+  avg(avg_velocidad) OVER(ORDER BY hora
+     ROWS BETWEEN 30 PRECEDING AND CURRENT ROW )
+     as moving_average
+from asd;
+    
+  "
+  )
+
+#select *,
+#  avg(Price) OVER(ORDER BY Date
+#     ROWS BETWEEN 2 PRECEDING AND CURRENT ROW )
+#     as moving_average
+#from stock_price;
+
+```
+
+
+https://www.postgresql.org/docs/current/tutorial-window.html 
+
+```{r}
+velocidad_hora %>%
+  mutate(
+    hora =  
+  ) %>% 
+  ggplot(
+  aes(
+    x = hora,
+    y = moving_average
+  )
+) + geom_line()
+```
 
 
 

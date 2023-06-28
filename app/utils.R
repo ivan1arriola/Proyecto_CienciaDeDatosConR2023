@@ -71,7 +71,7 @@ colores <- colorFactor(
 
 
 semaforoIcon <- makeIcon(
-  iconUrl = here::here("media", "semaforo.png"),
+  iconUrl = "media/semaforo.png",
   iconWidth = 10, iconHeight = 13
 )
 

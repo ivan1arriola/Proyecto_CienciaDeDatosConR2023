@@ -59,7 +59,7 @@ mvd_map_fixed <- st_make_valid(st_transform(mvd_map, crs = 4326))
 puntos_sensores <- d_sensores %>% 
   select(latitud, longitud) %>%
   mutate(puntos_transformados = transformarCoord(latitud, longitud, mvd_map))
-capaSemafotos <- st_read(here::here("v_int_semaforos", "v_int_semaforos.shp"))
+capaSemafotos <- st_read(here::here('app',"v_int_semaforos", "v_int_semaforos.shp"))
 
 ```
 

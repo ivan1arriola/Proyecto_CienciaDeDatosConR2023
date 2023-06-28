@@ -107,7 +107,7 @@ con <- DBI::dbConnect(
 )
 ```
 
-![Diagrama de la base de datos](media/fct_registros.png "Diagrama de la base de datos"){width="300" height="600"}
+![Diagrama de la base de datos](app/media/fct_registros.png "Diagrama de la base de datos"){width="300" height="600"}
 
 En la base de datos la tabla principal es `fct_registros`
 
@@ -181,7 +181,7 @@ mvd_map_fixed <- st_make_valid(st_transform(mvd_map, crs = 4326))
 puntos_sensores <- d_sensores %>% 
   select(barrio, latitud, longitud) %>%
   mutate(transformarCoord(latitud, longitud, mvd_map))
-capaSemafotos <- st_read(here::here("v_int_semaforos", "v_int_semaforos.shp"))
+capaSemafotos <- st_read(here::here('app', "v_int_semaforos", "v_int_semaforos.shp"))
 
 ```
 

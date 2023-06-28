@@ -1,22 +1,8 @@
-#
-# This is the server logic of a Shiny web application. You can run the
-# application by clicking 'Run App' above.
-#
-# Find out more about building applications with Shiny here:
-#
-#    http://shiny.rstudio.com/
-#
 
+library(magrittr)
 library(shiny)
-library(tidyverse)
-library(DBI)
-library(RPostgres)
-library(sf)
 library(leaflet)
-library(paletteer)
 library(geouy)
-library(spdep)
-library(leaflet)
 source("utils.R")
 
 
@@ -34,33 +20,46 @@ d_sensores <- DBI::dbGetQuery(
   "SELECT * FROM d_sensores"
 )
 
-mvd_map <- load_geouy("Barrios")
+map_file <- "downloaded_data/Barrios.shp"
 
-mvd_map_fixed <- st_make_valid(st_transform(mvd_map, crs = 4326))
+if (file.exists(map_file)) {
+  mvd_map <- sf::st_read(map_file)
+} else {
+  mvd_map <- load_geouy("Barrios")
+  sf::st_write(mvd_map, map_file)  # Guardar el mapa en un archivo
+}
+
+mvd_map_fixed <- sf::st_make_valid(st_transform(mvd_map, crs = 4326))
+
 
 puntos_sensores <- d_sensores %>% 
-  select(barrio, latitud, longitud) %>%
-  mutate(transformarCoord(latitud, longitud, mvd_map))
+  dplyr::select(barrio, latitud, longitud) %>%
+  dplyr::mutate(transformarCoord(latitud, longitud, mvd_map))
 
-capaSemafotos <- st_read(here::here("v_int_semaforos", "v_int_semaforos.shp"))
+capaSemafotos <- sf::st_read("v_int_semaforos/v_int_semaforos.shp")
 
 
 velocidadxBarrioMax <- tryCatch( 
   { 
-    # intentar leer el archivo CSV 
-    read.csv('downloaded_data/velocidadxBarrioMax.csv') 
+    readr::read_csv('downloaded_data/velocidadxBarrioMax.csv') 
   }, 
   warning = function(w) {
-    # imprimir la advertencia y devolver NA message(w)
     return(NA) 
   }, error = function(e) { 
-    # imprimir el error y hacer la consulta a la base de datos 
     message(e) 
     DBI::dbGetQuery( 
-      con, " SELECT d_sensores.barrio, MAX(fct_registros.velocidad) AS max_velocidad FROM fct_registros LEFT JOIN d_sensores ON fct_registros.id_detector = d_sensores.id_detector GROUP BY d_sensores.barrio " 
+      con, 
+      " 
+      SELECT 
+        d_sensores.barrio, 
+        MAX(fct_registros.velocidad) AS max_velocidad 
+      FROM fct_registros 
+      LEFT JOIN d_sensores ON fct_registros.id_detector = d_sensores.id_detector 
+      GROUP BY d_sensores.barrio 
+      " 
     ) 
   }, finally = { 
-    # cerrar la conexión a la base de datos DBI::dbDisconnect(con) 
+    DBI::dbDisconnect(con) 
   } 
 )
 
@@ -69,12 +68,39 @@ velocidadxBarrioMax <- tryCatch(
 
 server <- function(input, output, session) {
   
-    output$map <- renderLeaflet({
-
-      leaflet() %>%
-        addTiles() %>%
+  output$map <- renderLeaflet({
+    leaflet() %>% addTiles()
+  })
+  
+  observe({
+    leafletProxy("map") %>%
+      clearShapes() %>%
+      clearMarkers()
+    
+    if ("semaforo" %in% input$variable) {
+      leafletProxy("map") %>%
+        addMarkers(
+          data = st_transform(capaSemafotos, crs = 4326),
+          icon = semaforoIcon,
+          group = 'Semaforo'
+        )
+    }
+    
+    if ("sensor" %in% input$variable) {
+      leafletProxy("map") %>%
+        addMarkers(
+          data = d_sensores,
+          lat = ~latitud,
+          lng = ~longitud,
+          label = ~paste(dsc_avenida, " - ", dsc_int_anterior, " - ", dsc_int_siguiente),
+          group = 'Sensores'
+        )
+    }
+    
+    if ("barrio" %in% input$variable) {
+      leafletProxy("map") %>%
         addPolygons(
-          data=mvd_map_fixed,
+          data = mvd_map_fixed,
           weight = 5,
           opacity = 0.5,
           fill = TRUE,
@@ -83,31 +109,13 @@ server <- function(input, output, session) {
           popupOptions = NULL,
           label = ~stringr::str_to_title(nombbarr),
           group = 'Barrios'
-        ) %>% 
-        addMarkers(
-          data = st_transform(capaSemafotos, crs = 4326), 
-          icon= semaforoIcon,
-          group = 'Semaforo'
-        ) %>% 
-        addMarkers(
-          data = d_sensores, 
-          lat = ~latitud, 
-          lng = ~longitud,
-          label = ~paste(dsc_avenida, " - ", dsc_int_anterior, " - ", dsc_int_siguiente),
-          group = 'Sensores'
-        ) %>% 
-        addLayersControl( 
-          overlayGroups = c('Semaforo', 'Sensores', 'Barrios') 
         )
-      
-      
-      
-      })
-    
-    output$uni <- renderDataTable({
-      velocidadxBarrioMax 
-
-    })
-    
-    output$multi <- renderPlot({})
-  }
+    }
+  })
+  
+  output$uni <- renderDataTable({
+    velocidadxBarrioMax
+  })
+  
+  output$multi <- renderPlot({})
+}

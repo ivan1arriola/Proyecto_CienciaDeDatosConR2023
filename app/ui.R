@@ -2,7 +2,6 @@
 
 library(shiny)
 library(leaflet)
-library(tidyverse)
 
 ui <- fluidPage(
     titlePanel("Trafico UY"),

@@ -397,10 +397,7 @@ from asd;
 https://www.postgresql.org/docs/current/tutorial-window.html 
 
 ```{r}
-velocidad_hora %>%
-  mutate(
-    hora =  
-  ) %>% 
+velocidad_hora %>% 
   ggplot(
   aes(
     x = hora,

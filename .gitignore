@@ -39,10 +39,6 @@ Datos/
 *.xlsx
 *.xls
 *.sav
-*.html
-*.pdf
-*/*.html
-*/*.pdf
 */*.csv
 */*.xlsx
 */*.xls

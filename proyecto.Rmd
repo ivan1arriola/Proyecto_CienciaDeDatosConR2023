@@ -18,7 +18,7 @@ library(paletteer)
 library(geouy)
 library(spdep)
 library(leaflet)
-source(here::here("utils.R"))
+source(here::here("app", "utils.R"))
 ```
 
 ```{r Variables de Entorno, eval=FALSE, echo=FALSE}
@@ -132,16 +132,18 @@ colores <- colorFactor(
     popupOptions = NULL,
     label = ~stringr::str_to_title(nombbarr) 
   ) %>% 
+    addMarkers(
+    data = st_transform(capaSemafotos, crs = 4326), 
+    icon= semaforoIcon,
+    opacity = 0.5,
+  ) %>% 
   addMarkers(
     data = d_sensores, 
     lat = ~latitud, 
     lng = ~longitud,
     label = ~paste(dsc_avenida, " - ", dsc_int_anterior, " - ", dsc_int_siguiente)
-  ) %>% 
-  addCircleMarkers(
-    data = st_transform(capaSemafotos, crs = 4326), 
-    color = "red", 
-    radius = 3)
+  )
+  
 )
 
 ```

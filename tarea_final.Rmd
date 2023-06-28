@@ -385,11 +385,7 @@ from asd;
   "
   )
 
-#select *,
-#  avg(Price) OVER(ORDER BY Date
-#     ROWS BETWEEN 2 PRECEDING AND CURRENT ROW )
-#     as moving_average
-#from stock_price;
+head(velocidad_hora)
 
 ```
 
@@ -397,7 +393,12 @@ from asd;
 https://www.postgresql.org/docs/current/tutorial-window.html 
 
 ```{r}
+numero_hora <- velocidad_hora
+
 velocidad_hora %>% 
+  mutate(
+    hora = 
+  ) %>% 
   ggplot(
   aes(
     x = hora,

@@ -313,21 +313,21 @@ En el grafico se puede observar:
 
 ```{r}
 (
-  maxVelocidad_diaSemana_barrio <- DBI::dbGetQuery(
+  maxVolumen_diaSemana_barrio <- DBI::dbGetQuery(
     con,
     "
       SELECT
             d_sensores.barrio,
             d_date.day_of_week,
-            MAX(fct_registros.velocidad) AS max_velocidad,
-            count(fct_registros.velocidad) AS cant_registros
+            MAX(fct_registros.volume) AS max_volumen,
+            count(fct_registros.volume) AS cant_registros
       FROM fct_registros
           INNER JOIN d_sensores ON fct_registros.id_detector = d_sensores.id_detector
           LEFT JOIN d_date on fct_registros.id_fecha = d_date.id_fecha
       group by d_sensores.barrio, d_date.day_of_week
     "
   ) %>% mutate(
-    variacionConMedia = max_velocidad - mean(max_velocidad)
+    variacionConMedia = max_volumen - mean(max_volumen)
   )
 )
 
@@ -335,7 +335,7 @@ En el grafico se puede observar:
 
 
 ```{r}
-maxVelocidad_diaSemana_barrio %>%
+maxVolumen_diaSemana_barrio %>%
   ggplot(
     aes(
       x = barrio,

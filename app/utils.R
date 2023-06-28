@@ -1,4 +1,6 @@
 library(sf)
+library(tidyr)
+library(dplyr)
 mvd_map <- load_geouy("Barrios")
 mvd_map_fixed <- st_make_valid(st_transform(mvd_map, crs = 4326))
 

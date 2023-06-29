@@ -1,25 +1,48 @@
 
 
-library(shiny)
-library(leaflet)
+header <- dashboardHeader(
+    title = "Trafico UY"
+)
 
-ui <- fluidPage(
-    titlePanel("Trafico UY"),
-    sidebarLayout(
-        sidebarPanel(
-            checkboxGroupInput("variable", "Variables a Mostrar:",
-                                c("Semaforos" = "semaforo",
-                                  "Barrios" = "barrio",
-                                  "Sensores" = "sensor")),
+sidebar <- dashboardSidebar(
+    sidebarMenu(
+        menuItem("Mapa", tabName = "mapa", icon = icon("map")),
+        menuItem("Univariado", tabName = "univariado", icon = icon("chart-bar")),
+        menuItem("Multivariado", tabName = "multivariado", icon = icon("chart-pie"))
+        
+    )
+)
+
+body <- dashboardBody(
+    tags$style("#variable { margin: 20px; } .content {margin-left: 2rem"),
+    
+    tabItems(
+        tabItem(
+            tabName = "mapa",
+            fluidRow(
+                mapa_ui("mapa_module")
+            )
         ),
-        mainPanel(
-          tabsetPanel(
-            tabPanel("Mapa",
-                     leafletOutput('map', width = "100%", height = "60vh")),
-            tabPanel("Univariado",
-                     dataTableOutput('uni')),
-            tabPanel("Multivariado",
-                     plotOutput('multi')))
+        
+        tabItem(
+            tabName = "univariado",
+            fluidRow(
+                univariado_ui("univariado_module"),
+            )
+        ),
+        
+        tabItem(
+            tabName = "multivariado",
+            fluidRow(
+                plotOutput('multi')
+            )
         )
     )
+)
+
+ui <- dashboardPage(
+    skin = "black",
+    header,
+    sidebar,
+    body
 )

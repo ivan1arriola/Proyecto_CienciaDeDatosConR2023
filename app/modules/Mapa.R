@@ -1,15 +1,49 @@
+# Interfaz ---------------------------------------------------------------------
+
 mapa_ui <- function(id) {
   ns <- NS(id)
   fluidRow(
-    leafletOutput(ns("map"), width = "100%", height = "60vh"),
-    checkboxGroupInput(ns("variable"), "Variables a Mostrar:",
-                       c("Semaforos" = "semaforo",
-                         "Barrios" = "barrio",
-                         "Sensores" = "sensor"))
+    box(
+      leafletOutput(ns("map"), width = "100%", height = "60vh")
+    ),
+    fluidRow(
+      box(
+        h1("Controles"),
+        checkboxInput(inputId = ns("valor_semaforo"),
+                      label = "Semaforos",
+                      value = FALSE),
+        
+        checkboxInput(inputId = ns("valor_barrio"),
+                      label = "Barrios",
+                      value = FALSE),
+        
+        checkboxInput(inputId = ns("valor_sensor"),
+                      label = "Sensores",
+                      value = FALSE),
+        
+        conditionalPanel(
+          condition = paste0("input['", id, "-valor_sensor'] == 1"), #Esta es la unica forma en la que anda...
+          h2("Opciones para Sensor"),
+            selectInput(
+              ns("sensor_color"), 
+              "Colorear sensor segun:",
+              c(
+                "Semaforos" = "semaforo",
+                "Barrios" = "barrio",
+                "Sensores" = "sensor"
+                )
+            
+            )
+        )
+      )
+      
+    )
   )
 }
 
 
+
+# Servidor ---------------------------------------------------------------------
 mapa_server <- function(input, output, session) {
   output$map <- renderLeaflet({
     leaflet() %>% 
@@ -17,12 +51,12 @@ mapa_server <- function(input, output, session) {
       setView(lng = (-56.43151  + -56.02365 ) / 2, 
               lat = (-34.93811  + -34.70182) / 2, 
               zoom = 11)
+    
   })
   
   observe({
-    if ("semaforo" %in% input$variable) {
+    if (input$valor_semaforo) {
       leafletProxy("map") %>%
-        clearGroup(group = 'Semaforo') %>%
         addMarkers(
           data = sf::st_transform(capaSemafotos, crs = 4326),
           icon = semaforoIcon,
@@ -33,9 +67,8 @@ mapa_server <- function(input, output, session) {
   })
   
   observe({
-    if ("sensor" %in% input$variable) {
+    if (input$valor_sensor) {
       leafletProxy("map") %>%
-        clearGroup(group = 'Sensores') %>%
         addMarkers(
           data = d_sensores,
           lat = ~latitud,
@@ -51,9 +84,8 @@ mapa_server <- function(input, output, session) {
   
   
   observe({
-    if ("barrio" %in% input$variable) {
+    if (input$valor_barrio) {
       leafletProxy("map") %>%
-        clearGroup(group = 'Barrios') %>%
         addPolygons(
           data = mvd_map_fixed,
           weight = 5,

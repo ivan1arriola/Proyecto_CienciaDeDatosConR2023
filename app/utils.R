@@ -1,4 +1,3 @@
-mvd_map <- geouy::load_geouy("Barrios")
 
 transformarCoord <- function(lat, lon, mvd_map) {
   puntos_lat_lng <- data.frame(lng = lon, lat = lat)
@@ -56,11 +55,6 @@ nacol <- function(spdf) {
 }
 print("nacol loaded")
 
-colores <- leaflet::colorFactor(
-  palette = "Set1", 
-  domain = nacol(sf::st_make_valid(sf::st_transform(mvd_map, crs = 4326)))
-)
-print("colores loaded")
 
 semaforoIcon <- leaflet::makeIcon(
   iconUrl = "media/semaforo.png",

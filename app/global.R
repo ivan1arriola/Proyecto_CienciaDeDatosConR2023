@@ -32,6 +32,12 @@ if (file.exists(map_file)) {
 }
 mvd_map_fixed <- sf::st_make_valid(sf::st_transform(mvd_map, crs = 4326))
 
+#### colores del mapa
+colores <- leaflet::colorFactor(
+  palette = "Set1", 
+  domain = nacol(sf::st_make_valid(sf::st_transform(mvd_map, crs = 4326)))
+)
+
 
 
 ### Coneccion a la Base de datos
@@ -65,27 +71,46 @@ puntos_sensores <- d_sensores %>%
   dplyr::mutate(transformarCoord(latitud, longitud, mvd_map))
 
 
-### Velocidades Maximas detectadas por Barrio
-velocidades_file <- paste0(dataDir, "/velocidadxBarrioMax.csv")
-if (file.exists(velocidades_file)) {
-  velocidadxBarrioMax <- readr::read_csv(velocidades_file)
+### registros maximos por rango hora, dia de la semana y barrio
+registros_max_file <- paste0(dataDir, "/registros_max_file.csv")
+if (file.exists(registros_max_file)) {
+  registros_max_barrioxdiaxhora <- readr::read_csv(registros_max_file)
   
 } else {
-  velocidadxBarrioMax <- DBI::dbGetQuery(
+  registros_max_barrioxdiaxhora <- DBI::dbGetQuery(
     con,
     "
       SELECT
         d_sensores.barrio,
-        MAX(fct_registros.velocidad) AS max_velocidad
-      FROM fct_registros
-      LEFT JOIN d_sensores ON fct_registros.id_detector = d_sensores.id_detector
-      GROUP BY d_sensores.barrio
+        d_date.day_of_week,
+        CASE
+            WHEN fct_registros.id_hora >= 0 AND fct_registros.id_hora <= 600 THEN '00:00 - 06:00'
+            WHEN fct_registros.id_hora > 600 AND fct_registros.id_hora <= 1200 THEN '06:01 - 12:00'
+            WHEN fct_registros.id_hora > 1200 AND fct_registros.id_hora <= 1800 THEN '12:01 - 18:00'
+            WHEN fct_registros.id_hora > 1800 AND fct_registros.id_hora <= 2359 THEN '18:01 - 23:59'
+            ELSE 'Unknown'
+        END AS hora_rango,
+        MAX(fct_registros.velocidad) AS max_velocidad,
+        MAX(fct_registros.volume) AS max_volumen,
+        COUNT(fct_registros.velocidad) AS cant_registros
+    FROM fct_registros
+    INNER JOIN d_sensores ON fct_registros.id_detector = d_sensores.id_detector
+    LEFT JOIN d_date ON fct_registros.id_fecha = d_date.id_fecha
+    GROUP BY d_sensores.barrio, d_date.day_of_week, hora_rango
       "
   )
-  readr::write_csv(velocidadxBarrioMax, velocidades_file)
+  readr::write_csv(registros_max_barrioxdiaxhora, registros_max_file)
   
 }
 
-
+registros_max_barrioxdiaxhora <- registros_max_barrioxdiaxhora %>% 
+  mutate( 
+    dia_de_la_semana = 
+      factor(
+       day_of_week,
+        levels = c(1, 2, 3, 4, 5, 6, 7),
+        labels = c("Lunes", "Martes", "Miercoles", "Jueves", "Viernes", "Sabado", "Domingo")
+      )
+  )
 
 

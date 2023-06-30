@@ -14,8 +14,9 @@ sidebar <- dashboardSidebar(
 )
 
 body <- dashboardBody(
-    tags$style("#variable { margin: 20px; } .content {margin-left: 2rem"),
-    
+    tags$head(
+        tags$link(rel = "stylesheet", type = "text/css", href = "custom.css")
+    ),
     tabItems(
         tabItem(
             tabName = "mapa",
@@ -46,3 +47,4 @@ ui <- dashboardPage(
     sidebar,
     body
 )
+

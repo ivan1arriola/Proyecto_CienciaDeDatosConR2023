@@ -18,7 +18,7 @@ checkboxes <- function(ns){
   box(
     title = "Controles Mapa",
     status = "info",
-    width = 12,
+    width = NULL,
     solidHeader = TRUE,
     checkboxInput(inputId = ns("valor_semaforo"),
                   label = "Semaforos",
@@ -57,14 +57,31 @@ conditional_panel_barrio <- function(ns) {
     condition = paste0("input['", ns("valor_barrio"), "'] == 1"),
     box(
       title = "Opciones para Barrio",
+      width =  NULL,
       selectInput(
         ns("barrio_color"), 
         "Colorear Barrio según:",
         c(
           "Cantidad de infracciones" = "infracciones",
           "Velocidad Maxima registrada" = "velocidadMax",
-          "Cantidad de Sensores" = "sensor"
+          "Volumen Max x Hora" = "volumenMax"
         )
+      ),
+      selectInput(
+        "hora",
+        "Seleccione un rango de horas",
+        c(
+          '00:00 - 06:00' = 1,
+          '06:01 - 12:00' = 2,
+          '12:01 - 18:00' = 3,
+          '18:01 - 23:59' = 4
+        )
+        
+      ),
+      selectInput(
+        "diaSemana",
+        "Seleccione un día de la semana",
+        choices = c("Lunes", "Martes", "Miércoles", "Jueves", "Viernes", "Sábado", "Domingo")
       )
     )
   )

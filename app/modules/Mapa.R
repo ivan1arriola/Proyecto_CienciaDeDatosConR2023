@@ -1,4 +1,18 @@
 # Interfaz ---------------------------------------------------------------------
+intervalos <- c(
+  '00:00 - 01:59',
+  '02:00 - 03:59',
+  '04:00 - 05:59',
+  '06:00 - 07:59',
+  '08:00 - 09:59',
+  '10:00 - 11:59',
+  '12:00 - 13:59',
+  '14:00 - 15:59',
+  '16:00 - 17:59',
+  '18:00 - 19:59',
+  '20:00 - 21:59',
+  '22:00 - 23:59'
+)
 
 mapa <- function(ns) {
   box(
@@ -9,7 +23,7 @@ mapa <- function(ns) {
     leafletOutput(
       ns("map"),
       width = "100%",
-      height = "60vh"
+      height = "80vh"
     )
   )
 }
@@ -77,13 +91,8 @@ conditional_panel_barrio <- function(ns) {
       selectInput(
         ns("hora"),
         "Seleccione un rango de horas",
-        c(
-          "00:00 - 06:00",
-          "06:01 - 12:00",
-          "12:01 - 18:00",
-          "18:01 - 23:59"
-        ),
-        selected = "00:00 - 06:00"
+        intervalos,
+        selected = intervalos[1]
       ),
       selectInput(
         ns("dia"),

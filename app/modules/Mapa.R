@@ -18,6 +18,7 @@ checkboxes <- function(ns) {
   box(
     title = "Controles Mapa",
     status = "info",
+    collapsible = TRUE,
     width = NULL,
     solidHeader = TRUE,
     checkboxInput(
@@ -87,7 +88,7 @@ conditional_panel_barrio <- function(ns) {
       selectInput(
         ns("dia"),
         "Seleccione un día de la semana",
-        choices = c("Lunes", "Martes", "Miércoles", "Jueves", "Viernes", "Sábado", "Domingo"),
+        choices = c("Lunes", "Martes", "Miercoles", "Jueves", "Viernes", "Sabado", "Domingo"),
         selected = "Lunes"
       )
     )

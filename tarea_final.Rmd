@@ -23,6 +23,7 @@ library(paletteer)
 library(geouy)
 library(spdep)
 library(leaflet)
+library(xtable)
 source(here::here("app", "utils.R"))
 ```
 
@@ -47,7 +48,7 @@ Los datos utilizados son estos
 -   [Ubicación de sensores de medición de conteo vehículos](https://catalogodatos.gub.uy/dataset/intendencia-montevideo-ubicacion-de-sensores-de-medicion-de-conteo-vehiculos)
 -   [Semaforos](https://geoweb.montevideo.gub.uy/geonetwork/srv/spa/catalog.search#/metadata/d2da8cdd-c718-4eeb-9825-7069498b29c2)
 
-Todos provenientes de la intendencia de montevideo
+Todos provenientes de la Intendencia de Montevideo
 
 ### Observaciones
 
@@ -96,7 +97,7 @@ Sobre estos datos en particular, son *100 sensores* que se van cambiando de ubic
 
 Debido a que los datos utilizados, estan estrechamente relacionados y a su vez son sumamente masivos, hemos decidido utilizar una base de datos relacionales.
 
-```{r Coneccion a Base de Datos}
+```{r Coneccion a Base de Datos, include = FALSE}
 con <- DBI::dbConnect(
   RPostgres::Postgres(),
   host = Sys.getenv("DB_HOST"),
@@ -112,66 +113,68 @@ con <- DBI::dbConnect(
 En la base de datos la tabla principal es `fct_registros`
 
 ### Tabla: fct_registros
-- Cantidad de datos: 85386695
-- Variables de la tabla:
-  - *id_registros* (Primary Key)
-  - id_carril
-  - *id_fecha* -> d_date(*id_fecha*) (Foreign Key)
-  - id_hora
-  - *id_detector* -> d_sensores(*id_detector*) (Foreign Key)
-  - volume
-  - volumen_hora
-  - velocidad
-  
+
+-   Cantidad de datos: 85386695
+-   Variables de la tabla:
+    -   *id_registros* (Primary Key)
+    -   id_carril
+    -   *id_fecha* -\> d_date(*id_fecha*) (Foreign Key)
+    -   id_hora
+    -   *id_detector* -\> d_sensores(*id_detector*) (Foreign Key)
+    -   volume
+    -   volumen_hora
+    -   velocidad
+
 ### Tabla: d_sensores
-- Cantidad de datos: 273
-- Variables de la tabla:
-  - *id_detector* (Primary Key)
-  - dsc_avenida
-  - dsc_int_anterior
-  - dsc_int_siguiente
-  - latitud
-  - longitud
-  - barrio
+
+-   Cantidad de datos: 273
+-   Variables de la tabla:
+    -   *id_detector* (Primary Key)
+    -   dsc_avenida
+    -   dsc_int_anterior
+    -   dsc_int_siguiente
+    -   latitud
+    -   longitud
+    -   barrio
 
 ### Tabla: d_date
-- Cantidad de datos: 3652
-- Variables de la tabla:
-  - *id_fecha* (Primary Key)
-  - date_actual
-  - epoch
-  - day_suffix
-  - day_name
-  - day_of_week
-  - day_of_month
-  - day_of_quarter
-  - day_of_year
-  - week_of_month
-  - week_of_year
-  - week_of_year_iso
-  - month_actual
-  - month_name
-  - month_name_abbreviated
-  - quarter_actual
-  - quarter_name
-  - year_actual
-  - first_day_of_week
-  - last_day_of_week
-  - first_day_of_month
-  - last_day_of_month
-  - first_day_of_quarter
-  - last_day_of_quarter
-  - first_day_of_year
-  - last_day_of_year
-  - mmyyyy
-  - mmddyyyy
-  - weekend_indr
-  - feriado
 
+-   Cantidad de datos: 3652
+-   Variables de la tabla:
+    -   *id_fecha* (Primary Key)
+    -   date_actual
+    -   epoch
+    -   day_suffix
+    -   day_name
+    -   day_of_week
+    -   day_of_month
+    -   day_of_quarter
+    -   day_of_year
+    -   week_of_month
+    -   week_of_year
+    -   week_of_year_iso
+    -   month_actual
+    -   month_name
+    -   month_name_abbreviated
+    -   quarter_actual
+    -   quarter_name
+    -   year_actual
+    -   first_day_of_week
+    -   last_day_of_week
+    -   first_day_of_month
+    -   last_day_of_month
+    -   first_day_of_quarter
+    -   last_day_of_quarter
+    -   first_day_of_year
+    -   last_day_of_year
+    -   mmyyyy
+    -   mmddyyyy
+    -   weekend_indr
+    -   feriado
 
 # Análisis exploratorio
 
-```{r Cargar Mapas , sensores, semaforos, message=FALSE, results='hide'}
+```{r Cargar Mapas, sensores, semaforos, message=FALSE, results='hide'}
 d_sensores <- DBI::dbGetQuery(
   con,
   "SELECT * FROM d_sensores"
@@ -190,15 +193,18 @@ capaSemafotos <- st_read(here::here('app',"data", "v_int_semaforos", "v_int_sema
 Los datos de los sensores no son de todos los barrios , sino que solamente alcanzan los siguientes barrios
 
 ```{r Cantidad de sensores por barrio}
-(
-  cant_sensores <- d_sensores %>% group_by(barrio) %>% 
-    summarise(
-      cant_de_sensores = n()
-    ) %>% arrange(desc(cant_de_sensores))
-)
+options(xtable.comment = FALSE)
+
+cant_sensores <- d_sensores %>% group_by(barrio) %>% 
+  summarise(
+    cant_de_sensores = n()
+    ) %>% 
+  arrange(desc(cant_de_sensores))
+
+xtable(cant_sensores)
 ```
 
-Y en un mapa tambien se puede visualizar
+En el siguiente mapa se puede visualizar
 
 ```{r Mapa de concentracion de sensores}
 
@@ -212,7 +218,7 @@ ggplot() +
     aes(
       fill = ifelse(cant_de_sensores == 0, NA, cant_de_sensores)
     )
-  )+
+  ) +
   scale_fill_viridis_c(option = "plasma", name = "Cantidad de sensores por barrio") +
   theme_void() +
   theme(legend.position = "bottom")
@@ -225,32 +231,78 @@ ggplot() +
 
 1.  ¿Existe alguna correlación entre el volumen de tráfico y la velocidad promedio en las avenidas de Montevideo?
 2.  ¿Cuáles son las avenidas con los mayores promedios de velocidad en Montevideo?
-3. ¿Cómo va variando el volumen y velocidad medidos a traves de la semana?
+3.  ¿Cómo va variando el volumen y velocidad medidos a traves de la semana?
+
+## ¿Cuáles son las avenidas con los mayores promedios de velocidad en Montevideo?
+
+Pasemos a investigar las calles con mayor promedio de velocidad. El siguiente gráfico nos muestra que las 3 calles con mas velocidad en promedio superan el máximo de 45km/h siendo este la velocidad máxima de circulación reglamentaria
+
+```{r, echo = FALSE}
+velocidad_calles <- DBI::dbGetQuery(
+  con,
+  "
+  SELECT d_sensores.dsc_avenida,
+    AVG(velocidad) AS velocidad_promedio
+  FROM fct_registros
+  INNER JOIN d_sensores ON fct_registros.id_detector = d_sensores.id_detector
+  GROUP BY dsc_avenida
+  "
+  ) 
+  
+velocidad_calles %>% 
+  arrange(desc(velocidad_promedio)) %>% 
+  slice_head(n = 10) %>% 
+  ggplot() +
+  geom_col(
+    aes(x = velocidad_promedio,
+        y = reorder(dsc_avenida, velocidad_promedio)
+        ),
+    fill = "grey60"
+  ) +
+  geom_text(
+    aes( 
+      x = velocidad_promedio, 
+      y = dsc_avenida, 
+      label = round(velocidad_promedio, 2)
+    ),
+    size = 5,
+    nudge_x = 3.5,
+  ) +
+  labs(x = "Velocidad promedio",
+       y = "Calle") +
+  theme_bw()
+  
+```
+
+```{r}
+
+```
+
 
 ## ¿Cómo va variando el volumen y velocidad medidos a traves de la semana?
 
-Para responder a esta duda, es necesario obtener el volumen y la velocidad promedio
-de todos los dias de la semana
+Para responder a esta duda, es necesario obtener el volumen y la velocidad promedio de todos los dias de la semana
 
-```{r promedios_semanales}
-(
-  promedios_semanales <- DBI::dbGetQuery(
-    con,
-    "
-      WITH tabla as (
-          SELECT
-            d_date.day_of_week as dia,
-            fct_registros.velocidad as velocidad,
-            fct_registros.volume as volumen
-          FROM fct_registros
-          LEFT JOIN d_date ON fct_registros.id_fecha = d_date.id_fecha
-      )
-  
-      SELECT
-          avg(velocidad) as avg_velocidad,
-          avg(volumen) as avg_volumen,
-          dia
-      FROM tabla GROUP BY dia
+```{r promedios_semanales, echo=FALSE}
+promedios_semanales <- DBI::dbGetQuery(
+  con,
+  "
+  WITH tabla as (
+    SELECT
+      d_date.day_of_week as dia,
+      fct_registros.velocidad as velocidad,
+      fct_registros.volume as volumen
+    FROM fct_registros
+    LEFT JOIN d_date ON fct_registros.id_fecha = d_date.id_fecha
+    )
+    
+    
+    SELECT
+      avg(velocidad) as avg_velocidad,
+      avg(volumen) as avg_volumen,
+      dia
+    FROM tabla 
+    GROUP BY dia
     "
   ) %>%
   mutate( 
@@ -258,22 +310,15 @@ de todos los dias de la semana
       factor(
         dia,
         levels = c(1, 2, 3, 4, 5, 6, 7),
-        labels = c("Lunes", "Martes", "Miercoles", "Jueves", "Viernes", "Sabado", "Domingo"
-        )
-      ) 
-  ) %>% 
+        labels = c("Lunes", "Martes", "Miercoles",
+                   "Jueves", "Viernes", "Sabado", "Domingo")
+        ) 
+    ) %>% 
   pivot_longer(
     cols = c("avg_velocidad", "avg_volumen"),
     names_to = "variable",
     values_to = "promedio"
-  ) 
- 
-)
-```
-
-```{r Grafico de barras de velocidad y volumen x Dia de la semana}
-
-promedios_semanales %>%
+    ) %>%
   ggplot() +
   geom_col(
     aes(
@@ -306,10 +351,10 @@ promedios_semanales %>%
     legend.position = "bottom"
   ) 
 
+promedios_semanales
 ```
-En el grafico se puede observar:
--   La velocidad media se mantiene casi constante durante toda la semana, salvo una leve variacion positiva los fines de semana.
--   El volumen medio de vehiculos detectados por los radares va variando en la semana, alcanzado su pico los viernes. Tambien es considerablemente inferior los fines de semana.
+
+En el grafico se puede observar: - La velocidad media se mantiene casi constante durante toda la semana, salvo una leve variacion positiva los fines de semana. - El volumen medio de vehiculos detectados por los radares va variando en la semana, alcanzado su pico los viernes. Tambien es considerablemente inferior los fines de semana.
 
 ```{r}
 (
@@ -333,7 +378,6 @@ En el grafico se puede observar:
 
 ```
 
-
 ```{r}
 maxVolumen_diaSemana_barrio %>%
   ggplot(
@@ -349,13 +393,8 @@ maxVolumen_diaSemana_barrio %>%
   coord_fixed() +
   coord_flip()
 ```
+
 La verdad que no veo nada interesante, mas alla que cerrito es muy dispar al resto
-
-
-
-
-
-
 
 ## Resultados interesantes
 
@@ -370,6 +409,21 @@ La verdad que no veo nada interesante, mas alla que cerrito es muy dispar al res
 ## Elección del modelo
 
 [Justificar la elección del modelo y explicar el proceso de selección.]
+```{r, eval = FALSE}
+arbol <- DBI::dbGetQuery(
+    con,
+    "
+    SELECT
+      d_sensores.dsc_avenida,
+      d_sensores.barrio,
+      fct_registros.volumen_hora,
+      fct_registros.volume,
+      fct_registros.velocidad
+    FROM d_sensores
+    INNER JOIN fct_registros ON d_sensores.id_detector = fct_registros.id_detector
+    "
+    )
+```
 
 ## Ajuste y evaluación
 

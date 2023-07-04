@@ -11,7 +11,8 @@ library(shiny)
 library(leaflet)
 library(bslib)
 library(shinydashboard)
-
+library(dplyr)
+library(sf)
 
 # Cargar modulos ----------------------------------------------------------
 
@@ -113,8 +114,8 @@ if (file.exists(registros_max_file)) {
   
 }
 
-registros_max_barrioxdiaxhora <- registros_max_sensorxdiaxhora %>% 
-  mutate( 
+registros_max_barrioxdiaxhora <- registros_max_barrioxdiaxhora %>% 
+  dplyr::mutate( 
     dia_de_la_semana = 
       factor(
         day_of_week,
@@ -126,10 +127,10 @@ registros_max_barrioxdiaxhora <- registros_max_sensorxdiaxhora %>%
 ### registros maximos por rango hora, dia de la semana y sensor
 registros_max_sensor_file <- paste0(dataDir, "/registros_max_sensor_file.csv")
 if (file.exists(registros_max_sensor_file)) {
-  registros_max_sensorxdiaxhora <- readr::read_csv(registros_max_sensor_file)
+  registros_max_barrioxdiaxhora <- readr::read_csv(registros_max_sensor_file)
   
 } else {
-  registros_max_sensorxdiaxhora <- DBI::dbGetQuery(
+  registros_max_barrioxdiaxhora <- DBI::dbGetQuery(
     con,
     "
       SELECT
@@ -165,8 +166,8 @@ if (file.exists(registros_max_sensor_file)) {
   
 }
 
-registros_max_sensorxdiaxhora <- registros_max_sensorxdiaxhora %>% 
-  mutate( 
+registros_max_barrioxdiaxhora <- registros_max_barrioxdiaxhora %>% 
+  dplyr::mutate( 
     dia_de_la_semana = 
       factor(
        day_of_week,

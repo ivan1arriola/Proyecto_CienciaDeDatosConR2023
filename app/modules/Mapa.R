@@ -132,6 +132,7 @@ mapa_ui <- function(id) {
 
 
 mapa_server <- function(input, output, session) {
+  
   generar_mapa <- function(dia_semana, rango_hora) {
     registros_filtrados <- registros_max_barrioxdiaxhora %>%
       filter(dia_de_la_semana == dia_semana) %>%
@@ -201,23 +202,15 @@ mapa_server <- function(input, output, session) {
 
   observe({
     if (input$valor_barrio) {
+      
       dia_semana <- input$dia
-      if (is.null(dia_semana)) {
-        dia_semana <- "Lunes"
-      }
-      print(dia_semana)
     
       rango_hora <- input$hora
-      if (is.null(rango_hora)) {
-        rango_hora <- "00:00 - 06:00"
-      }
-      print(rango_hora)
       
+
       map_mvd_max <- generar_mapa(dia_semana, rango_hora)
       map_mvd_max <- st_as_sf(map_mvd_max)
 
-      print("map_mvd_max")
-      
       if (input$barrio_color == "volumenMax") {
       print("volumenMax")
         
@@ -253,12 +246,3 @@ mapa_server <- function(input, output, session) {
 
 
 print("Mapa.R Loaded")
-
-
-# resumir la informacion de los sensores
-#> names(registros_max_barrioxdiaxhora)
-# [1] "barrio"           "day_of_week"      "hora_rango"       "max_velocidad"    "max_volumen"      "cant_registros"   "dia_de_la_semana"
-
-
-# > names(mvd_map_fixed)
-# [1] "gml_id"    "area_km"   "nombbarr"  "nrobarrio" "geometry"

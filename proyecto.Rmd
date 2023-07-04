@@ -1,0 +1,319 @@
+---
+title: "Proyecto"
+output: html_document
+date: "2023-06-14"
+---
+
+```{r Librerias , include = FALSE}
+library(tidyverse)
+library(DBI)
+library(RPostgres)
+library(sf)
+library(leaflet)
+library(paletteer)
+library(geouy)
+library(spdep)
+library(leaflet)
+source(here::here("app", "utils.R"))
+```
+
+```{r Variables de Entorno, eval=FALSE, echo=FALSE}
+usethis::edit_r_environ(
+  scope = "project"
+)
+```
+
+```{r Coneccion a Base de Datos}
+con <- DBI::dbConnect(
+  RPostgres::Postgres(),
+  host = Sys.getenv("DB_HOST"),
+  port = Sys.getenv("DB_PORT"),
+  user = Sys.getenv("DB_USER"),
+  password = Sys.getenv("DB_PASS"),
+  dbname = Sys.getenv("DB_NAME")
+)
+```
+
+```{r Tablas de la base de datos}
+# Obtener nombres de las tablas de la base de datos
+tablas <- DBI::dbListTables(con)
+
+# Obtener las variables de las tablas
+for (i in tablas){
+  cant <- dbGetQuery(con, paste("Select count(*) from", i ))[1,1]
+  print(paste("Tabla: ", i))
+  print(paste("Cantidad de datos: ", cant))
+  print("Varibales de la tabla:")
+  print(DBI::dbListFields(con, name = i))
+  cat("\n", "\n")
+}
+
+```
+```{r Cargar Mapas , sensores, semaforos, message=FALSE}
+d_sensores <- DBI::dbGetQuery(
+  con,
+  "SELECT * FROM d_sensores"
+  )
+mvd_map <- load_geouy("Barrios")
+mvd_map_fixed <- st_make_valid(st_transform(mvd_map, crs = 4326))
+puntos_sensores <- d_sensores %>% 
+  select(latitud, longitud) %>%
+  mutate(puntos_transformados = transformarCoord(latitud, longitud, mvd_map))
+capaSemafotos <- st_read(here::here("v_int_semaforos", "v_int_semaforos.shp"))
+
+```
+
+
+
+
+```{r Visualizacion de los elementos geolocalizables de los datos}
+# Crear una paleta de colores discreta, usando una funcion que indica como colorear para evitar
+# que queden 
+colores <- colorFactor(
+  palette = "Set1", 
+  domain = nacol(mvd_map_fixed)
+)
+
+# Crear el mapa interactivo con una capa de polígonos
+(
+  map <- leaflet() %>%
+  addTiles() %>%
+  addPolygons(
+    data=mvd_map_fixed,
+    weight = 5,
+    opacity = 0.5,
+    fill = TRUE,
+    fillColor = ~colores(nacol(mvd_map_fixed)),
+    popup = NULL,
+    popupOptions = NULL,
+    label = ~stringr::str_to_title(nombbarr) 
+  ) %>% 
+    addMarkers(
+    data = st_transform(capaSemafotos, crs = 4326), 
+    icon= semaforoIcon,
+    opacity = 0.5,
+  ) %>% 
+  addMarkers(
+    data = d_sensores, 
+    lat = ~latitud, 
+    lng = ~longitud,
+    label = ~paste(dsc_avenida, " - ", dsc_int_anterior, " - ", dsc_int_siguiente)
+  )
+  
+)
+
+```
+
+
+# Preguntas de Investigación
+
+1.  ¿Influye el barrio con la velocidad a la que van los vehículos?
+
+2.  ¿Existe alguna correlación entre el volumen de tráfico y la velocidad promedio en las avenidas de Montevideo?
+
+3.  ¿Existen diferencias en el volumen de tráfico y la velocidad promedio entre días laborales y fines de semana?
+
+4.  ¿Cuáles son las avenidas con los marzores promedios de velocidad en Montevideo?
+
+5.  **nueva** ¿Como afecta la presencia de semaforo a los indicadores de volumen y velocidad?
+
+## 1 - ¿Influye el barrio con la velocidad a la que van los vehículos?
+
+Grafico interactivo donde va contando la cantidad de gente que se pasa de cierta velocidad
+
+```{r Importar velocidad - barrio  }
+(
+  velocidadxBarrioMax <- DBI::dbGetQuery(
+    con,
+    "
+    SELECT
+      d_sensores.barrio,
+      MAX(fct_registros.velocidad) AS max_velocidad
+    FROM fct_registros
+    LEFT JOIN d_sensores ON fct_registros.id_detector = d_sensores.id_detector
+    GROUP BY d_sensores.barrio
+    "
+  )
+
+)
+
+```
+
+```{r}
+velocidadxBarrioMax %>% 
+  filter(barrio != 'NA') %>% 
+  ggplot(aes(y = max_velocidad,
+             x= fct_reorder(barrio, max_velocidad)
+        )
+    ) +
+  geom_col() +
+  coord_flip() +
+  theme(
+    aspect.ratio = 1,
+  ) +
+  scale_x_discrete(name = "Barrio") + 
+  scale_y_continuous(name = "Maximos de Velocidad")
+```
+
+```{r Mapa con velocidad media por barrio}
+(
+  mvd_map_velocidad_media <- mvd_map %>%
+    left_join(velocidadxBarrioMax,
+              by = c("nombbarr" = "barrio"))
+)
+
+mvd_map_velocidad_media %>%
+  ggplot(aes(fill = max_velocidad)) + 
+  geom_sf(colour = "grey75", size = 0.07) +
+  scale_fill_paletteer_c(palette = "grDevices::Heat")
+```
+
+## 4 - ¿Cuáles son las avenidas con los mayores promedios de velocidad en Montevideo?
+
+Para responder a esta pregunta, necesito determinar en que intervalo de tiempo voy a considerar el promedio. Ahora como primer acercamiento a los datos, me interesa determinar el promedio de velocidades por radar (cual va a estar en una determinada avenida), en el periodo de *marzo 2023*.
+
+```{r, eval=FALSE}
+(
+  promedios_velocidad <- DBI::dbGetQuery(
+    con,
+    "
+    WITH query_name1  AS (
+      SELECT
+        fct_registros.velocidad, 
+        d_sensores.dsc_avenida
+      FROM fct_registros
+      LEFT JOIN 
+        d_sensores 
+        ON 
+          fct_registros.id_detector = d_sensores.id_detector
+    
+    )
+    SELECT COUNT(velocidad) WHERE velocidad >60
+    GROUP BY d_sensores.dsc_avenida
+    FROM query_name1 
+      
+    "
+  )
+)
+
+```
+
+Ahora quiero visualizar en que partes de montevideo fueron observados estos datos
+
+```{r, eval=FALSE}
+(
+cantMarzorLimite60 <- promedios_velocidad_marzo23 %>% 
+  select(dsc_avenida,velocidad) %>% 
+  group_by(dsc_avenida) %>% 
+  summarise(
+    cantMayorALimite = sum(velocidad > 60)
+  ) %>% arrange(desc(cantMayorALimite))
+)
+
+```
+
+```{r,eval=FALSE}
+
+promedios_velocidad_marzo23 %>%
+  group_by(dsc_avenida) %>%
+  summarise(velocidad_promedio = round(mean(velocidad), 3)) %>%
+  filter(velocidad_promedio > 40) %>%
+  ggplot() +
+  geom_col(
+    aes(x = velocidad_promedio,
+        y = reorder(dsc_avenida, velocidad_promedio)
+        )
+    ) +
+  scale_x_continuous(name = "Velocidad promedio") +
+  scale_y_discrete(name = "Calles")
+
+
+```
+
+```{r,eval=FALSE}
+
+div <- function(cantMayorALimite) {
+  paste0("<div>", cantMayorALimite, "</div>")
+}
+
+
+#Clasifica 
+getColor <- function(cantMayorALimite) {
+  ifelse(cantMayorALimite <= 100, "green", ifelse(cantMayorALimite <= 1000, "orange", "red"))
+}
+
+
+icons <- awesomeIcons(
+  icon = 'ios-close',
+  iconColor = 'black',
+  library = 'ion',
+  markerColor = getColor(cantMarzorLimite60$cantMayorALimite)
+)
+
+leaflet(cantMarzorLimite60) %>%
+  addTiles() %>%
+  addAwesomeMarkers(lat = ~latitud, lng = ~longitud, icon = icons,
+             label = ~dsc_avenida,
+             popup = div(cantMarzorLimite60$cantMayorALimite)
+             )
+
+
+```
+
+## 2.¿Existe alguna correlación entre el volumen de tráfico y la velocidad promedio en las avenidas de Montevideo?
+
+```{r Importar velocidad - fecha - volumen - avenida }
+(
+  promediosMarzo23 <- DBI::dbGetQuery(
+    con,
+    "
+      WITH velocidad_volumen_enero_2023 AS (
+  SELECT
+    fct_registros.velocidad,
+    fct_registros.volume,
+    d_sensores.dsc_avenida, 
+    d_date.year_actual
+  FROM fct_registros
+  LEFT JOIN d_sensores ON fct_registros.id_detector = d_sensores.id_detector
+  LEFT JOIN d_date ON fct_registros.id_fecha = d_date.id_fecha
+),
+promedios_marzo_23 AS (
+  SELECT
+    dsc_avenida,
+    year_actual,
+    AVG(velocidad) AS velocidad_media,
+    AVG(volume) AS volumen_media
+  FROM velocidad_volumen_enero_2023
+  GROUP BY dsc_avenida, year_actual
+)
+SELECT *
+FROM promedios_marzo_23
+
+    "
+  )
+)
+
+```
+
+```{r}
+promediosMarzo23 %>% 
+  ggplot(
+    aes(
+      x = velocidad_media,
+      y = volumen_media
+    )
+  ) +
+  geom_point() + 
+  facet_wrap(~year_actual) +
+  scale_x_continuous(name = "Velocidad Media Anual") +
+  scale_y_continuous(name = "Volumen de Vehiculos Medio Anual") +
+  geom_smooth(method = lm)
+    
+  
+promediosMarzo23 %>% group_by(year_actual) %>% 
+  summarise(
+    correlacion = cor(velocidad_media, volumen_media)
+  )
+```
+
+El grafico no muestra una relacion aparente entre los promedios de las variables

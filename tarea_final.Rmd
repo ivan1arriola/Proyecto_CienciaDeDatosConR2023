@@ -456,3 +456,98 @@ arbol <- DBI::dbGetQuery(
 ## Posibles extensiones
 
 [Discutir posibles extensiones o mejoras para el proyecto.]
+
+
+```{r}
+registros_max_barrioxdiaxhora <- DBI::dbGetQuery(
+    con,
+    "
+      SELECT
+        d_sensores.barrio,
+        d_date.month_actual,
+        CASE
+            WHEN fct_registros.id_hora >= 0 AND fct_registros.id_hora < 200 THEN '00:00 - 01:59'
+            WHEN fct_registros.id_hora >= 200 AND fct_registros.id_hora < 400 THEN '02:00 - 03:59'
+            WHEN fct_registros.id_hora >= 400 AND fct_registros.id_hora < 600 THEN '04:00 - 05:59'
+            WHEN fct_registros.id_hora >= 600 AND fct_registros.id_hora < 800 THEN '06:00 - 07:59'
+            WHEN fct_registros.id_hora >= 800 AND fct_registros.id_hora < 1000 THEN '08:00 - 09:59'
+            WHEN fct_registros.id_hora >= 1000 AND fct_registros.id_hora < 1200 THEN '10:00 - 11:59'
+            WHEN fct_registros.id_hora >= 1200 AND fct_registros.id_hora < 1400 THEN '12:00 - 13:59'
+            WHEN fct_registros.id_hora >= 1400 AND fct_registros.id_hora < 1600 THEN '14:00 - 15:59'
+            WHEN fct_registros.id_hora >= 1600 AND fct_registros.id_hora < 1800 THEN '16:00 - 17:59'
+            WHEN fct_registros.id_hora >= 1800 AND fct_registros.id_hora < 2000 THEN '18:00 - 19:59'
+            WHEN fct_registros.id_hora >= 2000 AND fct_registros.id_hora < 2200 THEN '20:00 - 21:59'
+            WHEN fct_registros.id_hora >= 2200 AND fct_registros.id_hora <= 2359 THEN '22:00 - 23:59'
+            ELSE 'Unknown'
+        END AS hora_rango,
+        MAX(fct_registros.velocidad) AS max_velocidad,
+        MAX(fct_registros.volume) AS max_volumen,
+        AVG(fct_registros.velocidad) AS promedio_velocidad,
+        AVG(fct_registros.volume) AS promedio_volumen,
+        MAX(fct_registros.volumen_hora) as max_volumen_hora,
+        AVG(fct_registros.volumen_hora) as promedio_volumen_hora,
+        COUNT(fct_registros.velocidad) AS cant_registros
+    FROM fct_registros
+    INNER JOIN d_sensores ON fct_registros.id_detector = d_sensores.id_detector
+    LEFT JOIN d_date ON fct_registros.id_fecha = d_date.id_fecha
+    GROUP BY d_sensores.barrio, d_date.month_actual, hora_rango
+    "
+  )
+
+
+```
+
+```{r}
+
+registros_max_barrioxdiaxhora <- registros_max_barrioxdiaxhora %>% 
+  mutate( 
+    hora_rango = factor(
+      hora_rango,
+      levels = c(
+        "00:00 - 01:59", "02:00 - 03:59", "04:00 - 05:59", "06:00 - 07:59", "08:00 - 09:59",
+        "10:00 - 11:59", "12:00 - 13:59", "14:00 - 15:59", "16:00 - 17:59", "18:00 - 19:59",
+        "20:00 - 21:59", "22:00 - 23:59", "Unknown"
+      ),
+      labels = c(
+        "00:00 - 01:59", "02:00 - 03:59", "04:00 - 05:59", "06:00 - 07:59", "08:00 - 09:59",
+        "10:00 - 11:59", "12:00 - 13:59", "14:00 - 15:59", "16:00 - 17:59", "18:00 - 19:59",
+        "20:00 - 21:59", "22:00 - 23:59", "Unknown"
+      )
+    ),
+    mes = factor(
+      month_actual,
+      levels = 1:12,
+      labels = c(
+        "Enero", "Febrero", "Marzo", "Abril", "Mayo", "Junio",
+        "Julio", "Agosto", "Septiembre", "Octubre", "Noviembre", "Diciembre"
+      )
+    )
+  )
+
+
+```
+
+```{r}
+registros_max_barrioxdiaxhora %>%
+  ggplot(
+    aes(
+      x =  promedio_volumen_hora,
+      y = forcats::fct_rev(mes )
+    )
+  ) +
+  geom_boxplot() +
+  geom_point(
+    position = position_jitter(w=0, h=0.2),
+    alpha = 0.2,
+    aes(color = hora_rango)
+  ) +
+  theme(
+      legend.position = "none"
+    )+
+  stat_summary(fun = mean, geom = "point", size = 3, alpha = 0.6) 
+
+
+  
+```
+
+

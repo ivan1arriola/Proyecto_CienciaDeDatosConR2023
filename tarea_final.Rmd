@@ -3,6 +3,8 @@ title: "Tarea Final"
 author: "Arriola, Miquelerena, Rovetta"
 date: "`r Sys.Date()`"
 output: pdf_document
+bibliography: [packages.bib,bibliografia.bib]
+nocite: '@*'
 ---
 
 ```{r setup, include=FALSE}
@@ -10,11 +12,7 @@ knitr::opts_chunk$set(echo = FALSE)
 ```
 
 ```{r Librerias , include = FALSE}
-library(magrittr)
-library(dplyr)
-library(tidyr)
-library(forcats)
-library(ggplot2)
+library(tidyverse)
 library(DBI)
 library(RPostgres)
 library(sf)
@@ -95,7 +93,7 @@ Sobre estos datos en particular, son *100 sensores* que se van cambiando de ubic
 
 ## Base de Datos
 
-Debido a que los datos utilizados, estan estrechamente relacionados y a su vez son sumamente masivos, hemos decidido utilizar una base de datos relacionales.
+Debido a que los datos utilizados, están estrechamente relacionados y a su vez son sumamente masivos, hemos decidido utilizar una base de datos relacionales.
 
 ```{r Coneccion a Base de Datos, include = FALSE}
 con <- DBI::dbConnect(
@@ -230,13 +228,13 @@ ggplot() +
 ## Preguntas de investigación
 
 1.  ¿Existe alguna correlación entre el volumen de tráfico y la velocidad promedio en las avenidas de Montevideo?
-2.  ¿Cuáles son las avenidas con los mayores promedios de velocidad en Montevideo?
-3.  ¿Cómo va variando el volumen y velocidad medidos a traves de la semana?
+2.  ¿Cuáles son las calles con los mayores promedios de velocidad en Montevideo?
+3.  ¿Cómo va variando el volumen y velocidad medidos a través de la semana?
 
-## ¿Cuáles son las avenidas con los mayores promedios de velocidad en Montevideo?
+## ¿Cuáles son las calles con los mayores promedios de velocidad en Montevideo? ¿Con que frecuencia se cometen excesos de velocidad?
 
-Pasemos a investigar las calles con mayor promedio de velocidad. El siguiente gráfico nos muestra que las 3 calles con mas velocidad en promedio superan el máximo de 45km/h siendo este la velocidad máxima de circulación reglamentaria
 
+Pasemos a investigar las calles con mayor promedio de velocidad.
 ```{r, echo = FALSE}
 velocidad_calles <- DBI::dbGetQuery(
   con,
@@ -248,17 +246,24 @@ velocidad_calles <- DBI::dbGetQuery(
   GROUP BY dsc_avenida
   "
   ) 
-  
+
+avenidas <- c("18 de Julio","8 de Octubre","Agraciada", "Av Brasil", "Av Italia","Bv Artigas","Bv Batlle y Ordonez","Bv Espana","C M Ramirez","Centenario","Fernandez Crespo","Bolivia","Albo","Belloni","Benito Blanco","Burges","Garibaldi","Garzon","Gral Flores","Millan","Morquio","Ponce","Rambla","Ricaldoni","Rivera","Rodo","San Martin","Saravia", "Soca","Uruguay","Varela", "L A de Herrera")  
+
 velocidad_calles %>% 
+  mutate(
+    Tipo = case_match(dsc_avenida,
+                      avenidas ~ "Avenida"
+      ),
+    Tipo = ifelse(is.na(Tipo), "Calle", "Avenida")
+    ) %>% 
   arrange(desc(velocidad_promedio)) %>% 
   slice_head(n = 10) %>% 
   ggplot() +
   geom_col(
     aes(x = velocidad_promedio,
-        y = reorder(dsc_avenida, velocidad_promedio)
-        ),
-    fill = "grey60"
-  ) +
+        y = reorder(dsc_avenida, velocidad_promedio),
+        fill = Tipo) 
+    ) +
   geom_text(
     aes( 
       x = velocidad_promedio, 
@@ -270,13 +275,51 @@ velocidad_calles %>%
   ) +
   labs(x = "Velocidad promedio",
        y = "Calle") +
+  scale_fill_manual(
+    values = c("Avenida" = "blue",
+               "Calle" = "grey33")
+    ) +
   theme_bw()
   
 ```
 
-```{r}
+El siguiente gráfico nos muestra que las 3 calles con mas velocidad en promedio superan el máximo de 45km/h siendo este la velocidad máxima de circulación reglamentaria. La avenida más rápida en promedio no alcanza el máximo de velocidad perimitido
 
+
+Si bien 
+
+```{r, eval=FALSE}
+excesos <- DBI::dbGetQuery(
+  con,
+  "
+  SELECT d_sensores.dsc_avenida,
+    fct_registros.velocidad
+  FROM fct_registros
+  JOIN d_sensores ON fct_registros.id_detector = d_sensores.id_detector
+  WHERE fct_registros.velocidad > 45
+  ORDER BY RANDOM()
+  LIMIT 5000
+  "
+  ) %>% 
+  mutate(
+    Tipo = case_match(dsc_avenida,
+                      avenidas ~ "Avenida"),
+    Tipo = ifelse(is.na(Tipo), "Calle", "Avenida")
+    ) 
+
+excesos %>% 
+  group_by(dsc_avenida) %>% 
+  summarise(cant = n()) %>%
+  arrange(desc(cant)) %>% 
+  slice_head(n = 10) %>% 
+  ggplot() +
+  geom_col(
+    aes(x = cant,
+        y = reorder(dsc_avenida, cant))
+  )
 ```
+
+
 
 
 ## ¿Cómo va variando el volumen y velocidad medidos a traves de la semana?
@@ -409,6 +452,7 @@ La verdad que no veo nada interesante, mas alla que cerrito es muy dispar al res
 ## Elección del modelo
 
 [Justificar la elección del modelo y explicar el proceso de selección.]
+
 ```{r, eval = FALSE}
 arbol <- DBI::dbGetQuery(
     con,
@@ -456,7 +500,6 @@ arbol <- DBI::dbGetQuery(
 ## Posibles extensiones
 
 [Discutir posibles extensiones o mejoras para el proyecto.]
-
 
 ```{r}
 registros_max_barrioxdiaxhora <- DBI::dbGetQuery(
@@ -550,4 +593,7 @@ registros_max_barrioxdiaxhora %>%
   
 ```
 
+### Referencias
 
+::: {#refs}
+:::

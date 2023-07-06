@@ -190,22 +190,17 @@ capaSemafotos <- st_read(here::here('app',"data", "v_int_semaforos", "v_int_sema
 
 Los datos de los sensores no son de todos los barrios , sino que solamente alcanzan los siguientes barrios
 
-```{r Cantidad de sensores por barrio}
-options(xtable.comment = FALSE)
-
+```{r Cantidad de sensores por barrio, echo = FALSE}
 cant_sensores <- d_sensores %>% group_by(barrio) %>% 
   summarise(
     cant_de_sensores = n()
     ) %>% 
   arrange(desc(cant_de_sensores))
-
-xtable(cant_sensores)
 ```
 
 En el siguiente mapa se puede visualizar
 
-```{r Mapa de concentracion de sensores}
-
+```{r Mapa de concentracion de sensores, echo = FALSE}
 mvd_map_sensores <- mvd_map_fixed %>% 
   left_join(cant_sensores, by = c("nombbarr" = "barrio")) %>%
   mutate(cant_de_sensores = ifelse(is.na(cant_de_sensores), 0, cant_de_sensores))
@@ -251,10 +246,8 @@ avenidas <- c("18 de Julio","8 de Octubre","Agraciada", "Av Brasil", "Av Italia"
 
 velocidad_calles %>% 
   mutate(
-    Tipo = case_match(dsc_avenida,
-                      avenidas ~ "Avenida"
-      ),
-    Tipo = ifelse(is.na(Tipo), "Calle", "Avenida")
+    Tipo = ifelse(dsc_avenida %in% avenidas,
+                  "Avenida", "Calle")
     ) %>% 
   arrange(desc(velocidad_promedio)) %>% 
   slice_head(n = 10) %>% 
@@ -271,7 +264,7 @@ velocidad_calles %>%
       label = round(velocidad_promedio, 2)
     ),
     size = 5,
-    nudge_x = 3.5,
+    nudge_x = 4,
   ) +
   labs(x = "Velocidad promedio",
        y = "Calle") +
@@ -285,10 +278,10 @@ velocidad_calles %>%
 
 El siguiente gráfico nos muestra que las 3 calles con mas velocidad en promedio superan el máximo de 45km/h siendo este la velocidad máxima de circulación reglamentaria. La avenida más rápida en promedio no alcanza el máximo de velocidad perimitido
 
+En promedio de velocidad circulacion los conductores son prudentes, aun asi vemos con que frecuencia se comenten excesos de velocidad.
 
-Si bien 
 
-```{r, eval=FALSE}
+```{r, echo=FALSE, fig.cap = "Es netamente nula la proporcion de excesos de velocidad, podemos decir el los conductores en general respetan los limites de velocidad"}
 excesos <- DBI::dbGetQuery(
   con,
   "
@@ -296,35 +289,53 @@ excesos <- DBI::dbGetQuery(
     fct_registros.velocidad
   FROM fct_registros
   JOIN d_sensores ON fct_registros.id_detector = d_sensores.id_detector
-  WHERE fct_registros.velocidad > 45
-  ORDER BY RANDOM()
-  LIMIT 5000
+  LIMIT 200000
   "
   ) %>% 
   mutate(
-    Tipo = case_match(dsc_avenida,
-                      avenidas ~ "Avenida"),
-    Tipo = ifelse(is.na(Tipo), "Calle", "Avenida")
-    ) 
+    Tipo = ifelse(dsc_avenida %in% avenidas,
+                  "Avenida", "Calle"),
+    limite = ifelse(dsc_avenida %in% c("Bv Artigas",
+                                       "Rambla",
+                                       "Larranaga",
+                                       "Bv Batlle y Ordonez",
+                                       "Garzon"), 60, 45)
+  )
 
 excesos %>% 
-  group_by(dsc_avenida) %>% 
-  summarise(cant = n()) %>%
+  filter(velocidad > limite) %>% 
+  group_by(dsc_avenida) %>%  
+  summarise(
+    cant = (n()/nrow(excesos))*100
+    ) %>%
   arrange(desc(cant)) %>% 
   slice_head(n = 10) %>% 
   ggplot() +
   geom_col(
-    aes(x = cant,
-        y = reorder(dsc_avenida, cant))
-  )
+    aes(
+      x = cant, 
+      y = reorder(dsc_avenida, cant))
+    ) + 
+  geom_text(
+    aes( 
+      x = cant, 
+      y = dsc_avenida, 
+      label = paste(round(cant, 2),"%")
+      ),
+    size = 5,
+    nudge_x = 0.15
+  ) +
+  labs(x = "Proporcion",
+       y = "Calle") +
+  theme_bw()
 ```
 
 
 
 
-## ¿Cómo va variando el volumen y velocidad medidos a traves de la semana?
+## ¿Cómo va variando el volumen y velocidad medidos a traves de el tiempo?
 
-Para responder a esta duda, es necesario obtener el volumen y la velocidad promedio de todos los dias de la semana
+Observemos el volumen y la velocidad promedio de todos los días de la semana
 
 ```{r promedios_semanales, echo=FALSE}
 promedios_semanales <- DBI::dbGetQuery(
@@ -400,24 +411,24 @@ promedios_semanales
 En el grafico se puede observar: - La velocidad media se mantiene casi constante durante toda la semana, salvo una leve variacion positiva los fines de semana. - El volumen medio de vehiculos detectados por los radares va variando en la semana, alcanzado su pico los viernes. Tambien es considerablemente inferior los fines de semana.
 
 ```{r}
-(
-  maxVolumen_diaSemana_barrio <- DBI::dbGetQuery(
+maxVolumen_diaSemana_barrio <- DBI::dbGetQuery(
     con,
     "
-      SELECT
-            d_sensores.barrio,
-            d_date.day_of_week,
-            MAX(fct_registros.volume) AS max_volumen,
-            count(fct_registros.volume) AS cant_registros
-      FROM fct_registros
-          INNER JOIN d_sensores ON fct_registros.id_detector = d_sensores.id_detector
-          LEFT JOIN d_date on fct_registros.id_fecha = d_date.id_fecha
-      group by d_sensores.barrio, d_date.day_of_week
+    SELECT
+      d_sensores.barrio,
+      d_date.day_of_week,
+      MAX(fct_registros.volume) AS max_volumen,
+      COUNT(fct_registros.volume) AS cant_registros
+    FROM fct_registros
+    INNER JOIN d_sensores ON
+      fct_registros.id_detector = d_sensores.id_detector
+    LEFT JOIN d_date ON
+      fct_registros.id_fecha = d_date.id_fecha
+    GROUP BY d_sensores.barrio, d_date.day_of_week
     "
   ) %>% mutate(
     variacionConMedia = max_volumen - mean(max_volumen)
   )
-)
 
 ```
 
@@ -586,7 +597,7 @@ registros_max_barrioxdiaxhora %>%
   ) +
   theme(
       legend.position = "none"
-    )+
+    ) +
   stat_summary(fun = mean, geom = "point", size = 3, alpha = 0.6) 
 
 

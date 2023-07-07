@@ -408,9 +408,151 @@ promedios_semanales <- DBI::dbGetQuery(
 promedios_semanales
 ```
 
-En el grafico se puede observar: - La velocidad media se mantiene casi constante durante toda la semana, salvo una leve variacion positiva los fines de semana. - El volumen medio de vehiculos detectados por los radares va variando en la semana, alcanzado su pico los viernes. Tambien es considerablemente inferior los fines de semana.
+En el gráfico se puede observar: - La velocidad media se mantiene casi constante durante toda la semana, salvo una leve variación positiva los fines de semana. - El volumen medio de vehículos detectados por los radares va variando en la semana, alcanzado su pico los viernes. También es considerablemente inferior los fines de semana.
 
-```{r}
+
+Si bien previamente obsevamos leves exceos de velocidad, dentro de esos excesos se registran velocidades maximas de mas de 100km/h, veamos esos maximos pro franja horaria segun si fue registrado en un fin de semana o no
+```{r, echo = FALSE}
+registros_max_barrioxdiaxhora <- DBI::dbGetQuery(
+    con,
+    "
+      SELECT
+        d_date.day_of_week,
+        d_date.day_name,
+        d_date.month_actual,
+        d_date.month_name,
+        d_date.year_actual,
+        d_date.weekend_indr,
+        CASE
+          WHEN fct_registros.id_hora >= 0 AND fct_registros.id_hora < 200 THEN '00:00 - 01:59'
+          WHEN fct_registros.id_hora >= 200 AND fct_registros.id_hora < 400 THEN '02:00 - 03:59'
+          WHEN fct_registros.id_hora >= 400 AND fct_registros.id_hora < 600 THEN '04:00 - 05:59'
+          WHEN fct_registros.id_hora >= 600 AND fct_registros.id_hora < 800 THEN '06:00 - 07:59'
+          WHEN fct_registros.id_hora >= 800 AND fct_registros.id_hora < 1000 THEN '08:00 - 09:59'
+          WHEN fct_registros.id_hora >= 1000 AND fct_registros.id_hora < 1200 THEN '10:00 - 11:59'
+          WHEN fct_registros.id_hora >= 1200 AND fct_registros.id_hora < 1400 THEN '12:00 - 13:59'
+          WHEN fct_registros.id_hora >= 1400 AND fct_registros.id_hora < 1600 THEN '14:00 - 15:59'
+          WHEN fct_registros.id_hora >= 1600 AND fct_registros.id_hora < 1800 THEN '16:00 - 17:59'
+          WHEN fct_registros.id_hora >= 1800 AND fct_registros.id_hora < 2000 THEN '18:00 - 19:59'
+          WHEN fct_registros.id_hora >= 2000 AND fct_registros.id_hora < 2200 THEN '20:00 - 21:59'
+          WHEN fct_registros.id_hora >= 2200 AND fct_registros.id_hora <= 2359 THEN '22:00 - 23:59'
+          ELSE 'Unknown'
+        END AS hora_rango,
+        MAX(fct_registros.velocidad) AS max_velocidad,
+        MAX(fct_registros.volume) AS max_volumen,
+        AVG(fct_registros.velocidad) AS promedio_velocidad,
+        AVG(fct_registros.volume) AS promedio_volumen,
+        MAX(fct_registros.volumen_hora) as max_volumen_hora,
+        AVG(fct_registros.volumen_hora) as promedio_volumen_hora,
+        COUNT(fct_registros.velocidad) AS cant_registros
+    FROM fct_registros
+    INNER JOIN d_sensores ON fct_registros.id_detector = d_sensores.id_detector
+    LEFT JOIN d_date ON fct_registros.id_fecha = d_date.id_fecha
+    GROUP BY d_date.day_of_week, hora_rango, d_date.month_actual, d_date.year_actual, d_date.weekend_indr, d_date.day_name, d_date.month_name
+    "
+  )
+
+mediana <- registros_max_barrioxdiaxhora %>% 
+  summarise(mediana = median(max_velocidad))
+mediana <- as.numeric(mediana)
+
+registros_max_barrioxdiaxhora %>%
+  ggplot(
+    aes(
+      x = max_velocidad,
+      y = fct_rev(hora_rango)
+    )
+  ) +
+  geom_boxplot() +
+  geom_point(
+    position = position_jitter(w=0, h=0.2),
+    alpha = 0.2,
+    aes(color = day_name)
+  ) +
+  stat_summary(fun = mean, geom = "point", size = 3, alpha = 0.6) +
+  geom_vline(xintercept = mediana) +
+  facet_grid(~weekend_indr)
+```
+Entre las 00:00 y las 08:00 es donde se alcanzan picos de casi 140 km/h, luego de ese rango se reduce la tendencia por ser horario laboral para luego crecer a medida de que cae la noche.
+Durante el fin de semana las velocidades máximas durante el horario laboral de lunes a viernes es totalmente diferente, los conductores durante el fin de semana aprovechan la baja de volumen para circular mas rápido.
+
+
+Si entramos en cada año vemos como crece la densidad de velocidad máxima registrada de lunes a viernes, 
+```{r, echo = FALSE, fig.cap = '2023 no esta completo, vamos a profundizar mas en nuestro modelo predictivo'}
+registros_max_barrioxdiaxhora %>%
+  ggplot(
+    aes(
+      x =  max_velocidad,
+      fill = weekend_indr
+    )
+  ) +
+  geom_density(alpha = 0.5) +
+  facet_grid(~year_actual) +
+  theme(legend.position = "bottom")
+```
+
+Ahora la desidad de velocidad durante los dias siempre se encuentran en un rango de (0,60]
+```{r, echo = FALSE}
+tabla <- DBI::dbGetQuery(
+  con,
+  "
+  SELECT
+    fct_registros.volume, 
+    fct_registros.velocidad,
+    d_date.day_of_week
+  FROM
+    fct_registros TABLESAMPLE SYSTEM (0.5)
+  INNER JOIN 
+    d_sensores ON fct_registros.id_detector = d_sensores.id_detector
+  INNER JOIN 
+    d_date ON fct_registros.id_fecha = d_date.id_fecha
+  WHERE
+    fct_registros.velocidad <> 0 AND fct_registros.volume <> 0
+
+  "
+) %>% 
+  mutate( 
+    dia_de_la_semana = 
+      factor(
+        day_of_week,
+        levels = c(1, 2, 3, 4, 5, 6, 7),
+        labels = c("Lunes", "Martes", "Miercoles", "Jueves", "Viernes", "Sabado", "Domingo")
+      )
+  )
+
+tabla %>%
+  ggplot() + 
+  geom_density(
+    aes(x = velocidad)
+  ) +
+  facet_wrap(~dia_de_la_semana) + 
+  scale_x_continuous(breaks = seq(0, 150, 20),
+                     name = "Velocidad"
+  ) +
+  scale_y_continuous(
+    name= "Cantidad"
+  )
+```
+
+Con el volumen de trafico, hay una gran diferencia el domingo comparado con el resto de los dias, en todos los dias la mayoria de volumen se concentra en el rango (0,10] donde en dicho rango alcanza su pico de circulacion en todo Montevideo.
+```{r, echo = FALSE}
+tabla %>%
+  ggplot() + 
+  geom_density(
+    aes(x = volume)
+  ) +
+  facet_wrap(~dia_de_la_semana) +
+  scale_x_continuous(
+    name = "Volumen",
+    breaks = seq(0,100,10)
+  ) +
+  scale_y_continuous(
+    name= "Cantidad"
+  ) +
+  coord_cartesian(xlim = c(0, 100))
+```
+
+```{r va esto??, eval=FALSE}
 maxVolumen_diaSemana_barrio <- DBI::dbGetQuery(
     con,
     "
@@ -432,7 +574,7 @@ maxVolumen_diaSemana_barrio <- DBI::dbGetQuery(
 
 ```
 
-```{r}
+```{r va esto?, eval=FALSE}
 maxVolumen_diaSemana_barrio %>%
   ggplot(
     aes(
@@ -462,7 +604,7 @@ La verdad que no veo nada interesante, mas alla que cerrito es muy dispar al res
 
 ## Elección del modelo
 
-[Justificar la elección del modelo y explicar el proceso de selección.]
+Intentaremos predecir como sera la velocidad en lo que queda del 2023
 
 ```{r, eval = FALSE}
 arbol <- DBI::dbGetQuery(
@@ -496,11 +638,10 @@ arbol <- DBI::dbGetQuery(
 
 ## Descripción
 
-[Describir la aplicación Shiny y cómo se diseñó para cumplir con los objetivos del proyecto.]
+La aplicación consta de 4 partes. Un mapa con la ubicación de los semáforos, un analisis univariado, otro multivariado y el modelo.
+La palicacion resume todo lo hecho anteriormente.
+[Enlace](https://ivan1arriola.shinyapps.io/tareaFinal/)
 
-## Enlace
-
-[Incluir el enlace a la aplicación Shiny alojada en el servidor de RStudio.]
 
 # Comentarios finales
 
@@ -512,6 +653,7 @@ arbol <- DBI::dbGetQuery(
 
 [Discutir posibles extensiones o mejoras para el proyecto.]
 
+<<<<<<< HEAD
 ```{r}
 registros_max_barrioxdiaxhora <- DBI::dbGetQuery(
     con,
@@ -551,7 +693,7 @@ registros_max_barrioxdiaxhora <- DBI::dbGetQuery(
   )
 
 
-```
+
 
 ```{r}
 
@@ -595,6 +737,7 @@ registros_max_barrioxdiaxhora %>%
   ggplot(
     aes(
       x =  max_velocidad,
+<<<<<<< HEAD
       y = forcats::fct_rev(hora_rango )
     )
   ) +
@@ -663,13 +806,80 @@ Haciendo una observacion de los meses cubiertos por los datos, nos hemos dado cu
 
 
 
+      fill = weekend_indr # esto añade el color según el factor esFinDeSemana
+    )
+  ) +
+  geom_density(alpha = 0.5) +
+  facet_wrap(~month_actual)
+  
+
+```
+Se observa un pico en Agosto
+Dia de la nostalgia?
+
+
+```{r}
+(
+  registros_año_mes <- DBI::dbGetQuery(
+    con,
+    "
+       SELECT
+        count(*),
+    d_date.month_actual, d_date.year_actual
+    FROM fct_registros
+    LEFT JOIN d_date ON fct_registros.id_fecha = d_date.id_fecha
+    GROUP BY d_date.month_actual, d_date.year_actual
+
+    "
+  )
+)
+```
+
+Haciendo una observacion de los meses cubiertos por los datos, nos hemos dado cuenta que Agosto solo esta representado por los datos del 2021.
+
+
+```{r, eval=FALSE}
+registros_Agosto <- registros_Agosto %>% 
+  dplyr::mutate( 
+    dia_de_la_semana = 
+      factor(
+        day_of_week,
+        levels = c(1, 2, 3, 4, 5, 6, 7),
+        labels = c("Lunes", "Martes", "Miercoles", "Jueves", "Viernes", "Sabado", "Domingo")
+      )
+  )
+
+```
+
+
+```{r, eval=FALSE}
+registros_Agosto %>%  filter(year_actual == 2022)  %>%
+  ggplot(
+    aes(
+      x =  day_of_month,
+      fill = dia_de_la_semana
+    )
+  ) +
+  geom_col(
+    aes(
+      y = max_volumen_hora,
+    )
+  ) +
+  scale_x_continuous(
+    breaks = 1:31
+  )
+  
+```
+
+>>>>>>> 5571c9a65a042800010c830a52bd778036626fea
+
 ### Referencias
 
 
 
 ## .¿Existe alguna correlación entre el volumen de tráfico y la velocidad promedio en las avenidas de Montevideo?
 
-```{r Importar velocidad - fecha - volumen - avenida  , echo=FALSE}
+```{r Importar velocidad - fecha - volumen - avenida  , eval=FALSE}
 (
   promediosMarzo23 <- DBI::dbGetQuery(
     con,
@@ -702,7 +912,7 @@ FROM promedios_marzo_23
 
 ```
 
-```{r , echo=FALSE}
+```{r , eval=FALSE}
 promediosMarzo23 %>% 
   ggplot(
     aes(
@@ -728,6 +938,7 @@ El grafico no muestra una relacion aparente entre los promedios de las variables
 # Muestra aleatoria de volumen y velocidad, agregados por dia de la semana
 Vamos a analizar la relacion entre el volumen de trefico, la velocidad, el dia de la semana y el barrio donde se encuentra el sensor
 
+<<<<<<< HEAD
 ```{r}
 tabla <- DBI::dbGetQuery(
   con,
@@ -790,5 +1001,9 @@ tabla %>%
   )
 ```
 
+=======
+
+
+>>>>>>> 5571c9a65a042800010c830a52bd778036626fea
 
 

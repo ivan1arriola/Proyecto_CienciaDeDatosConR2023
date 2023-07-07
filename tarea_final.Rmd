@@ -3,6 +3,8 @@ title: "Tarea Final"
 author: "Arriola, Miquelerena, Rovetta"
 date: "`r Sys.Date()`"
 output: pdf_document
+bibliography: [packages.bib,bibliografia.bib]
+nocite: '@*'
 ---
 
 ```{r setup, include=FALSE}
@@ -10,11 +12,7 @@ knitr::opts_chunk$set(echo = FALSE)
 ```
 
 ```{r Librerias , include = FALSE}
-library(magrittr)
-library(dplyr)
-library(tidyr)
-library(forcats)
-library(ggplot2)
+library(tidyverse)
 library(DBI)
 library(RPostgres)
 library(sf)
@@ -95,7 +93,7 @@ Sobre estos datos en particular, son *100 sensores* que se van cambiando de ubic
 
 ## Base de Datos
 
-Debido a que los datos utilizados, estan estrechamente relacionados y a su vez son sumamente masivos, hemos decidido utilizar una base de datos relacionales.
+Debido a que los datos utilizados, están estrechamente relacionados y a su vez son sumamente masivos, hemos decidido utilizar una base de datos relacionales.
 
 ```{r Coneccion a Base de Datos, include = FALSE}
 con <- DBI::dbConnect(
@@ -192,22 +190,17 @@ capaSemafotos <- st_read(here::here('app',"data", "v_int_semaforos", "v_int_sema
 
 Los datos de los sensores no son de todos los barrios , sino que solamente alcanzan los siguientes barrios
 
-```{r Cantidad de sensores por barrio}
-options(xtable.comment = FALSE)
-
+```{r Cantidad de sensores por barrio, echo = FALSE}
 cant_sensores <- d_sensores %>% group_by(barrio) %>% 
   summarise(
     cant_de_sensores = n()
     ) %>% 
   arrange(desc(cant_de_sensores))
-
-xtable(cant_sensores)
 ```
 
 En el siguiente mapa se puede visualizar
 
-```{r Mapa de concentracion de sensores}
-
+```{r Mapa de concentracion de sensores, echo = FALSE}
 mvd_map_sensores <- mvd_map_fixed %>% 
   left_join(cant_sensores, by = c("nombbarr" = "barrio")) %>%
   mutate(cant_de_sensores = ifelse(is.na(cant_de_sensores), 0, cant_de_sensores))
@@ -230,13 +223,13 @@ ggplot() +
 ## Preguntas de investigación
 
 1.  ¿Existe alguna correlación entre el volumen de tráfico y la velocidad promedio en las avenidas de Montevideo?
-2.  ¿Cuáles son las avenidas con los mayores promedios de velocidad en Montevideo?
-3.  ¿Cómo va variando el volumen y velocidad medidos a traves de la semana?
+2.  ¿Cuáles son las calles con los mayores promedios de velocidad en Montevideo?
+3.  ¿Cómo va variando el volumen y velocidad medidos a través de la semana?
 
-## ¿Cuáles son las avenidas con los mayores promedios de velocidad en Montevideo?
+## ¿Cuáles son las calles con los mayores promedios de velocidad en Montevideo? ¿Con que frecuencia se cometen excesos de velocidad?
 
-Pasemos a investigar las calles con mayor promedio de velocidad. El siguiente gráfico nos muestra que las 3 calles con mas velocidad en promedio superan el máximo de 45km/h siendo este la velocidad máxima de circulación reglamentaria
 
+Pasemos a investigar las calles con mayor promedio de velocidad.
 ```{r, echo = FALSE}
 velocidad_calles <- DBI::dbGetQuery(
   con,
@@ -248,17 +241,22 @@ velocidad_calles <- DBI::dbGetQuery(
   GROUP BY dsc_avenida
   "
   ) 
-  
+
+avenidas <- c("18 de Julio","8 de Octubre","Agraciada", "Av Brasil", "Av Italia","Bv Artigas","Bv Batlle y Ordonez","Bv Espana","C M Ramirez","Centenario","Fernandez Crespo","Bolivia","Albo","Belloni","Benito Blanco","Burges","Garibaldi","Garzon","Gral Flores","Millan","Morquio","Ponce","Rambla","Ricaldoni","Rivera","Rodo","San Martin","Saravia", "Soca","Uruguay","Varela", "L A de Herrera")  
+
 velocidad_calles %>% 
+  mutate(
+    Tipo = ifelse(dsc_avenida %in% avenidas,
+                  "Avenida", "Calle")
+    ) %>% 
   arrange(desc(velocidad_promedio)) %>% 
   slice_head(n = 10) %>% 
   ggplot() +
   geom_col(
     aes(x = velocidad_promedio,
-        y = reorder(dsc_avenida, velocidad_promedio)
-        ),
-    fill = "grey60"
-  ) +
+        y = reorder(dsc_avenida, velocidad_promedio),
+        fill = Tipo) 
+    ) +
   geom_text(
     aes( 
       x = velocidad_promedio, 
@@ -266,22 +264,78 @@ velocidad_calles %>%
       label = round(velocidad_promedio, 2)
     ),
     size = 5,
-    nudge_x = 3.5,
+    nudge_x = 4,
   ) +
   labs(x = "Velocidad promedio",
        y = "Calle") +
+  scale_fill_manual(
+    values = c("Avenida" = "blue",
+               "Calle" = "grey33")
+    ) +
   theme_bw()
   
 ```
 
-```{r}
+El siguiente gráfico nos muestra que las 3 calles con mas velocidad en promedio superan el máximo de 45km/h siendo este la velocidad máxima de circulación reglamentaria. La avenida más rápida en promedio no alcanza el máximo de velocidad perimitido
 
+En promedio de velocidad circulacion los conductores son prudentes, aun asi vemos con que frecuencia se comenten excesos de velocidad.
+
+
+```{r, echo=FALSE, fig.cap = "Es netamente nula la proporcion de excesos de velocidad, podemos decir el los conductores en general respetan los limites de velocidad"}
+excesos <- DBI::dbGetQuery(
+  con,
+  "
+  SELECT d_sensores.dsc_avenida,
+    fct_registros.velocidad
+  FROM fct_registros
+  JOIN d_sensores ON fct_registros.id_detector = d_sensores.id_detector
+  LIMIT 200000
+  "
+  ) %>% 
+  mutate(
+    Tipo = ifelse(dsc_avenida %in% avenidas,
+                  "Avenida", "Calle"),
+    limite = ifelse(dsc_avenida %in% c("Bv Artigas",
+                                       "Rambla",
+                                       "Larranaga",
+                                       "Bv Batlle y Ordonez",
+                                       "Garzon"), 60, 45)
+  )
+
+excesos %>% 
+  filter(velocidad > limite) %>% 
+  group_by(dsc_avenida) %>%  
+  summarise(
+    cant = (n()/nrow(excesos))*100
+    ) %>%
+  arrange(desc(cant)) %>% 
+  slice_head(n = 10) %>% 
+  ggplot() +
+  geom_col(
+    aes(
+      x = cant, 
+      y = reorder(dsc_avenida, cant))
+    ) + 
+  geom_text(
+    aes( 
+      x = cant, 
+      y = dsc_avenida, 
+      label = paste(round(cant, 2),"%")
+      ),
+    size = 5,
+    nudge_x = 0.15
+  ) +
+  labs(x = "Proporcion",
+       y = "Calle") +
+  theme_bw()
 ```
 
 
-## ¿Cómo va variando el volumen y velocidad medidos a traves de la semana?
 
-Para responder a esta duda, es necesario obtener el volumen y la velocidad promedio de todos los dias de la semana
+
+## ¿Cómo va variando el volumen y velocidad medidos a traves de el tiempo?
+
+Observemos el volumen y la velocidad promedio de todos los días de la semana
 
 ```{r promedios_semanales, echo=FALSE}
 promedios_semanales <- DBI::dbGetQuery(
@@ -357,24 +411,24 @@ promedios_semanales
 En el grafico se puede observar: - La velocidad media se mantiene casi constante durante toda la semana, salvo una leve variacion positiva los fines de semana. - El volumen medio de vehiculos detectados por los radares va variando en la semana, alcanzado su pico los viernes. Tambien es considerablemente inferior los fines de semana.
 
 ```{r}
-(
-  maxVolumen_diaSemana_barrio <- DBI::dbGetQuery(
+maxVolumen_diaSemana_barrio <- DBI::dbGetQuery(
     con,
     "
-      SELECT
-            d_sensores.barrio,
-            d_date.day_of_week,
-            MAX(fct_registros.volume) AS max_volumen,
-            count(fct_registros.volume) AS cant_registros
-      FROM fct_registros
-          INNER JOIN d_sensores ON fct_registros.id_detector = d_sensores.id_detector
-          LEFT JOIN d_date on fct_registros.id_fecha = d_date.id_fecha
-      group by d_sensores.barrio, d_date.day_of_week
+    SELECT
+      d_sensores.barrio,
+      d_date.day_of_week,
+      MAX(fct_registros.volume) AS max_volumen,
+      COUNT(fct_registros.volume) AS cant_registros
+    FROM fct_registros
+    INNER JOIN d_sensores ON
+      fct_registros.id_detector = d_sensores.id_detector
+    LEFT JOIN d_date ON
+      fct_registros.id_fecha = d_date.id_fecha
+    GROUP BY d_sensores.barrio, d_date.day_of_week
     "
   ) %>% mutate(
     variacionConMedia = max_volumen - mean(max_volumen)
   )
-)
 
 ```
 
@@ -409,6 +463,7 @@ La verdad que no veo nada interesante, mas alla que cerrito es muy dispar al res
 ## Elección del modelo
 
 [Justificar la elección del modelo y explicar el proceso de selección.]
+
 ```{r, eval = FALSE}
 arbol <- DBI::dbGetQuery(
     con,
@@ -456,7 +511,6 @@ arbol <- DBI::dbGetQuery(
 ## Posibles extensiones
 
 [Discutir posibles extensiones o mejoras para el proyecto.]
-
 
 ```{r}
 registros_max_barrioxdiaxhora <- DBI::dbGetQuery(
@@ -543,12 +597,14 @@ registros_max_barrioxdiaxhora %>%
   ) +
   theme(
       legend.position = "none"
-    )+
+    ) +
   stat_summary(fun = mean, geom = "point", size = 3, alpha = 0.6) 
 
 
   
 ```
+
+### Referencias
 
 
 

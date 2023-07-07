@@ -551,3 +551,63 @@ registros_max_barrioxdiaxhora %>%
 ```
 
 
+
+## .¿Existe alguna correlación entre el volumen de tráfico y la velocidad promedio en las avenidas de Montevideo?
+
+```{r Importar velocidad - fecha - volumen - avenida  , echo=FALSE}
+(
+  promediosMarzo23 <- DBI::dbGetQuery(
+    con,
+    "
+      WITH velocidad_volumen_enero_2023 AS (
+  SELECT
+    fct_registros.velocidad,
+    fct_registros.volume,
+    d_sensores.dsc_avenida, 
+    d_date.year_actual
+  FROM fct_registros
+  LEFT JOIN d_sensores ON fct_registros.id_detector = d_sensores.id_detector
+  LEFT JOIN d_date ON fct_registros.id_fecha = d_date.id_fecha
+),
+promedios_marzo_23 AS (
+  SELECT
+    dsc_avenida,
+    year_actual,
+    AVG(velocidad) AS velocidad_media,
+    AVG(volume) AS volumen_media
+  FROM velocidad_volumen_enero_2023
+  GROUP BY dsc_avenida, year_actual
+)
+SELECT *
+FROM promedios_marzo_23
+
+    "
+  )
+)
+
+```
+
+```{r , echo=FALSE}
+promediosMarzo23 %>% 
+  ggplot(
+    aes(
+      x = velocidad_media,
+      y = volumen_media
+    )
+  ) +
+  geom_point() + 
+  facet_wrap(~year_actual) +
+  scale_x_continuous(name = "Velocidad Media Anual") +
+  scale_y_continuous(name = "Volumen de Vehiculos Medio Anual") +
+  geom_smooth(method = lm)
+    
+  
+promediosMarzo23 %>% group_by(year_actual) %>% 
+  summarise(
+    correlacion = cor(velocidad_media, volumen_media)
+  )
+```
+
+El grafico no muestra una relacion aparente entre los promedios de las variables
+
+

@@ -517,8 +517,10 @@ registros_max_barrioxdiaxhora <- DBI::dbGetQuery(
     con,
     "
       SELECT
-        d_sensores.barrio,
+        d_date.day_of_week,
         d_date.month_actual,
+        d_date.year_actual,
+        d_date.weekend_indr,
         CASE
             WHEN fct_registros.id_hora >= 0 AND fct_registros.id_hora < 200 THEN '00:00 - 01:59'
             WHEN fct_registros.id_hora >= 200 AND fct_registros.id_hora < 400 THEN '02:00 - 03:59'
@@ -544,7 +546,7 @@ registros_max_barrioxdiaxhora <- DBI::dbGetQuery(
     FROM fct_registros
     INNER JOIN d_sensores ON fct_registros.id_detector = d_sensores.id_detector
     LEFT JOIN d_date ON fct_registros.id_fecha = d_date.id_fecha
-    GROUP BY d_sensores.barrio, d_date.month_actual, hora_rango
+    GROUP BY d_date.day_of_week, hora_rango, d_date.month_actual, d_date.year_actual, d_date.weekend_indr
     "
   )
 
@@ -555,6 +557,13 @@ registros_max_barrioxdiaxhora <- DBI::dbGetQuery(
 
 registros_max_barrioxdiaxhora <- registros_max_barrioxdiaxhora %>% 
   mutate( 
+    esFinDeSemana = weekend_indr,
+    dia_de_la_semana = 
+      factor(
+        day_of_week,
+        levels = c(1, 2, 3, 4, 5, 6, 7),
+        labels = c("Lunes", "Martes", "Miercoles", "Jueves", "Viernes", "Sabado", "Domingo")
+      ),
     hora_rango = factor(
       hora_rango,
       levels = c(
@@ -585,24 +594,74 @@ registros_max_barrioxdiaxhora <- registros_max_barrioxdiaxhora %>%
 registros_max_barrioxdiaxhora %>%
   ggplot(
     aes(
-      x =  promedio_volumen_hora,
-      y = forcats::fct_rev(mes )
+      x =  max_velocidad,
+      y = forcats::fct_rev(hora_rango )
     )
   ) +
   geom_boxplot() +
   geom_point(
     position = position_jitter(w=0, h=0.2),
     alpha = 0.2,
-    aes(color = hora_rango)
+    aes(color = dia_de_la_semana)
   ) +
-  theme(
-      legend.position = "none"
-    ) +
-  stat_summary(fun = mean, geom = "point", size = 3, alpha = 0.6) 
+  stat_summary(fun = mean, geom = "point", size = 3, alpha = 0.6) +
+  facet_grid(~esFinDeSemana)
 
 
   
 ```
+
+```{r}
+registros_max_barrioxdiaxhora %>%
+  ggplot(
+    aes(
+      x =  max_velocidad,
+      fill = esFinDeSemana # esto añade el color según el factor esFinDeSemana
+    )
+  ) +
+  geom_density(alpha = 0.5) +
+  facet_grid(~year_actual)
+  
+
+```
+
+```{r}
+registros_max_barrioxdiaxhora %>%
+  ggplot(
+    aes(
+      x =  max_velocidad,
+      fill = esFinDeSemana # esto añade el color según el factor esFinDeSemana
+    )
+  ) +
+  geom_density(alpha = 0.5) +
+  facet_wrap(~month_actual)
+  
+
+```
+Se observa un pico en Agosto
+Dia de la nostalgia?
+
+
+```{r}
+(
+  registros_año_mes <- DBI::dbGetQuery(
+    con,
+    "
+       SELECT
+        count(*),
+    d_date.month_actual, d_date.year_actual
+    FROM fct_registros
+    LEFT JOIN d_date ON fct_registros.id_fecha = d_date.id_fecha
+    GROUP BY d_date.month_actual, d_date.year_actual
+
+    "
+  )
+)
+```
+
+Haciendo una observacion de los meses cubiertos por los datos, nos hemos dado cuenta que Agosto solo esta representado por los datos del 2021.
+
+
 
 ### Referencias
 
@@ -665,5 +724,71 @@ promediosMarzo23 %>% group_by(year_actual) %>%
 ```
 
 El grafico no muestra una relacion aparente entre los promedios de las variables
+
+# Muestra aleatoria de volumen y velocidad, agregados por dia de la semana
+Vamos a analizar la relacion entre el volumen de trefico, la velocidad, el dia de la semana y el barrio donde se encuentra el sensor
+
+```{r}
+tabla <- DBI::dbGetQuery(
+  con,
+  "
+  SELECT
+    fct_registros.volume, 
+    fct_registros.velocidad,
+    d_date.day_of_week
+  FROM
+    fct_registros TABLESAMPLE SYSTEM (0.5)
+  INNER JOIN 
+    d_sensores ON fct_registros.id_detector = d_sensores.id_detector
+  INNER JOIN 
+    d_date ON fct_registros.id_fecha = d_date.id_fecha
+  WHERE
+    fct_registros.velocidad <> 0 AND fct_registros.volume <> 0
+
+  "
+) %>% 
+  dplyr::mutate( 
+    dia_de_la_semana = 
+      factor(
+        day_of_week,
+        levels = c(1, 2, 3, 4, 5, 6, 7),
+        labels = c("Lunes", "Martes", "Miercoles", "Jueves", "Viernes", "Sabado", "Domingo")
+      )
+  )
+```
+
+
+```{r}
+tabla %>%
+  ggplot() + 
+  geom_density(
+    aes(x = velocidad)
+  ) +
+  facet_wrap(~dia_de_la_semana) + 
+  scale_x_continuous(breaks = seq(0, 150, 20),
+                     name = "Velocidad"
+  ) +
+  scale_y_continuous(
+    name= "Cantidad"
+  )
+```
+
+
+```{r}
+tabla %>%
+  ggplot() + 
+  geom_density(
+    aes(x = volume)
+  ) +
+  facet_wrap(~dia_de_la_semana) +
+  scale_x_continuous(
+    breaks = seq(0, 400, 50),
+    name = "Volumen"
+  ) +
+  scale_y_continuous(
+    name= "Cantidad"
+  )
+```
+
 
 

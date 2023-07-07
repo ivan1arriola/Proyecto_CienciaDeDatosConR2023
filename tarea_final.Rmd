@@ -187,8 +187,8 @@ capaSemafotos <- st_read(here::here('app',"data", "v_int_semaforos", "v_int_sema
 ```
 
 ## Mapa de los datos
-
-Los datos de los sensores no son de todos los barrios , sino que solamente alcanzan los siguientes barrios
+Para empezar mostraremos la superficie de Montevideo alcanzada por la informacion de los sensores de la intendencia.
+Esta informacion no alcanza a todos los barrios , sino que solamente alcanza los siguientes barrios
 
 ```{r Cantidad de sensores por barrio, echo = FALSE}
 cant_sensores <- d_sensores %>% group_by(barrio) %>% 
@@ -196,6 +196,7 @@ cant_sensores <- d_sensores %>% group_by(barrio) %>%
     cant_de_sensores = n()
     ) %>% 
   arrange(desc(cant_de_sensores))
+print(cant_sensores)
 ```
 
 En el siguiente mapa se puede visualizar
@@ -223,14 +224,16 @@ ggplot() +
 ## Preguntas de investigación
 
 1.  ¿Existe alguna correlación entre el volumen de tráfico y la velocidad promedio en las avenidas de Montevideo?
-2.  ¿Cuáles son las calles con los mayores promedios de velocidad en Montevideo?
-3.  ¿Cómo va variando el volumen y velocidad medidos a través de la semana?
+2.  ¿Cuáles son las calles con los mayores promedios de velocidad en Montevideo? ¿Con que frecuencia se cometen excesos de velocidad?
+3. ¿Cómo va variando el volumen y velocidad medidos a través del TIEMPO?
+
 
 ## ¿Cuáles son las calles con los mayores promedios de velocidad en Montevideo? ¿Con que frecuencia se cometen excesos de velocidad?
 
 
 Pasemos a investigar las calles con mayor promedio de velocidad.
-```{r, echo = FALSE}
+
+```{r Importar datos de velocidad-calle, echo = FALSE }
 velocidad_calles <- DBI::dbGetQuery(
   con,
   "
@@ -240,8 +243,12 @@ velocidad_calles <- DBI::dbGetQuery(
   INNER JOIN d_sensores ON fct_registros.id_detector = d_sensores.id_detector
   GROUP BY dsc_avenida
   "
-  ) 
+  )
+```
 
+
+
+```{r Calles con mayor promedio de velocidad, echo = FALSE, fig.cap="Calles con mayor promedio de velocidad"}
 avenidas <- c("18 de Julio","8 de Octubre","Agraciada", "Av Brasil", "Av Italia","Bv Artigas","Bv Batlle y Ordonez","Bv Espana","C M Ramirez","Centenario","Fernandez Crespo","Bolivia","Albo","Belloni","Benito Blanco","Burges","Garibaldi","Garzon","Gral Flores","Millan","Morquio","Ponce","Rambla","Ricaldoni","Rivera","Rodo","San Martin","Saravia", "Soca","Uruguay","Varela", "L A de Herrera")  
 
 velocidad_calles %>% 
@@ -281,15 +288,14 @@ El siguiente gráfico nos muestra que las 3 calles con mas velocidad en promedio
 En promedio de velocidad circulacion los conductores son prudentes, aun asi vemos con que frecuencia se comenten excesos de velocidad.
 
 
-```{r, echo=FALSE, fig.cap = "Es netamente nula la proporcion de excesos de velocidad, podemos decir el los conductores en general respetan los limites de velocidad"}
+```{r Importar datos de exceso de velocidad, echo=FALSE }
 excesos <- DBI::dbGetQuery(
   con,
   "
   SELECT d_sensores.dsc_avenida,
-    fct_registros.velocidad
-  FROM fct_registros
+    fct_registros.velocidad 
+  FROM fct_registros TABLESAMPLE SYSTEM (10)
   JOIN d_sensores ON fct_registros.id_detector = d_sensores.id_detector
-  LIMIT 200000
   "
   ) %>% 
   mutate(
@@ -301,7 +307,10 @@ excesos <- DBI::dbGetQuery(
                                        "Bv Batlle y Ordonez",
                                        "Garzon"), 60, 45)
   )
+```
 
+
+```{r Grafico de , echo=FALSE, fig.cap = "Es netamente nula la proporcion de excesos de velocidad, podemos decir el los conductores en general respetan los limites de velocidad"}
 excesos %>% 
   filter(velocidad > limite) %>% 
   group_by(dsc_avenida) %>%  
@@ -693,6 +702,7 @@ registros_max_barrioxdiaxhora <- DBI::dbGetQuery(
   )
 
 
+```
 
 
 ```{r}
@@ -737,7 +747,6 @@ registros_max_barrioxdiaxhora %>%
   ggplot(
     aes(
       x =  max_velocidad,
-<<<<<<< HEAD
       y = forcats::fct_rev(hora_rango )
     )
   ) +
@@ -806,37 +815,6 @@ Haciendo una observacion de los meses cubiertos por los datos, nos hemos dado cu
 
 
 
-      fill = weekend_indr # esto añade el color según el factor esFinDeSemana
-    )
-  ) +
-  geom_density(alpha = 0.5) +
-  facet_wrap(~month_actual)
-  
-
-```
-Se observa un pico en Agosto
-Dia de la nostalgia?
-
-
-```{r}
-(
-  registros_año_mes <- DBI::dbGetQuery(
-    con,
-    "
-       SELECT
-        count(*),
-    d_date.month_actual, d_date.year_actual
-    FROM fct_registros
-    LEFT JOIN d_date ON fct_registros.id_fecha = d_date.id_fecha
-    GROUP BY d_date.month_actual, d_date.year_actual
-
-    "
-  )
-)
-```
-
-Haciendo una observacion de los meses cubiertos por los datos, nos hemos dado cuenta que Agosto solo esta representado por los datos del 2021.
-
 
 ```{r, eval=FALSE}
 registros_Agosto <- registros_Agosto %>% 
@@ -871,7 +849,6 @@ registros_Agosto %>%  filter(year_actual == 2022)  %>%
   
 ```
 
->>>>>>> 5571c9a65a042800010c830a52bd778036626fea
 
 ### Referencias
 
@@ -938,7 +915,7 @@ El grafico no muestra una relacion aparente entre los promedios de las variables
 # Muestra aleatoria de volumen y velocidad, agregados por dia de la semana
 Vamos a analizar la relacion entre el volumen de trefico, la velocidad, el dia de la semana y el barrio donde se encuentra el sensor
 
-<<<<<<< HEAD
+
 ```{r}
 tabla <- DBI::dbGetQuery(
   con,
@@ -1001,9 +978,8 @@ tabla %>%
   )
 ```
 
-=======
 
 
->>>>>>> 5571c9a65a042800010c830a52bd778036626fea
+
 
 

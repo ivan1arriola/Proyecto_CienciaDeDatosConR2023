@@ -6,8 +6,8 @@ output: pdf_document
 bibliography: [packages.bib,bibliografia.bib]
 nocite: '@*'
 header-includes: #allows you to add in your own Latex packages
-- \usepackage{float} #use the 'float' package
-- \floatplacement{figure}{H} #make every figure with caption = h
+- \usepackage{float} 
+- \floatplacement{figure}{H} 
 ---
 
 ```{r setup, include=FALSE}
@@ -32,7 +32,7 @@ source(here::here("app", "utils.R"))
 library(randomForest)
 library(modelr)
 
-#source(here::here("importacionesDB.R"))
+source(here::here("importarDatos.R")) # Aquí se importa todos los datos que se usan en el resto del documento
 ```
 
 ```{r Variables de Entorno, eval=FALSE, echo=FALSE}
@@ -58,9 +58,6 @@ Los datos utilizados son estos
 
 Todos provenientes de la Intendencia de Montevideo
 
-### Observaciones
-
-Los datos son mensuales. Van desde Enero 2021 hasta Abril 2023. Los datos de los semaforos son de septiembre del 2014
 
 ### Descripcion de variables
 
@@ -105,16 +102,6 @@ Sobre estos datos en particular, son *100 sensores* que se van cambiando de ubic
 
 Debido a que los datos utilizados, están estrechamente relacionados y a su vez son sumamente masivos, hemos decidido utilizar una base de datos relacionales.
 
-```{r Coneccion a Base de Datos, include = FALSE}
-con <- DBI::dbConnect(
-  RPostgres::Postgres(),
-  host = Sys.getenv("DB_HOST"),
-  port = Sys.getenv("DB_PORT"),
-  user = Sys.getenv("DB_USER"),
-  password = Sys.getenv("DB_PASS"),
-  dbname = Sys.getenv("DB_NAME")
-)
-```
 
 ![Diagrama de la base de datos](app/media/fct_registros.png "Diagrama de la base de datos"){width="300" height="600"}
 
@@ -182,20 +169,6 @@ En la base de datos la tabla principal es `fct_registros`
 
 # Análisis exploratorio
 
-```{r Cargar Mapas, sensores, semaforos, message=FALSE, results='hide'}
-d_sensores <- DBI::dbGetQuery(
-  con,
-  "SELECT * FROM d_sensores"
-  )
-mvd_map <- load_geouy("Barrios")
-mvd_map_fixed <- st_make_valid(st_transform(mvd_map, crs = 4326))
-puntos_sensores <- d_sensores %>% 
-  select(barrio, latitud, longitud) %>%
-  mutate(transformarCoord(latitud, longitud, mvd_map))
-capaSemafotos <- st_read(here::here('app',"data", "v_int_semaforos", "v_int_semaforos.shp"))
-
-```
-
 ## Sobre la ubicacion de los datos
 Para empezar mostraremos la superficie de Montevideo alcanzada por la informacion de los sensores de la intendencia.
 Esta informacion no alcanza a todos los barrios , sino que solamente alcanza los siguientes barrios
@@ -241,22 +214,6 @@ Comienzan desde Enero del 2021 hasta Mayo del 2023.
 
 ## Velocidad
 
-```{r Muestra aleatoria de velocidad y volumen}
-
-velocidad_volumen <- dbGetQuery(
-  conn = con,
-  statement = "
-  SELECT 
-    fct_registros.velocidad,
-    fct_registros.volume as volumen
-  FROM
-    fct_registros TABLESAMPLE SYSTEM (10)
-  
-  "
-)
-
-```
-
 
 ```{r Distribucion de velocidad, fig.cap= "Boxplot de Velocidad"}
 
@@ -289,8 +246,6 @@ velocidad_volumen %>% ggplot() +
 
 
 ```{r Distribucion de volumen, fig.cap= "Boxplot de Volumen"}
-library(ggplot2)
-
 promedio <- mean(velocidad_volumen$volumen)
 
 velocidad_volumen %>% ggplot() +
@@ -316,37 +271,6 @@ velocidad_volumen %>% ggplot() +
 
 ## Muestra aleatoria de volumen y velocidad, agregados por dia de la semana
 Vamos a analizar la relacion entre el volumen de trefico, la velocidad, el dia de la semana y el barrio donde se encuentra el sensor
-
-
-```{r}
-tabla <- DBI::dbGetQuery(
-  con,
-  "
-  SELECT
-    fct_registros.volume, 
-    fct_registros.velocidad,
-    d_date.day_of_week
-  FROM
-    fct_registros TABLESAMPLE SYSTEM (0.5)
-  INNER JOIN 
-    d_sensores ON fct_registros.id_detector = d_sensores.id_detector
-  INNER JOIN 
-    d_date ON fct_registros.id_fecha = d_date.id_fecha
-  WHERE
-    fct_registros.velocidad <> 0 AND fct_registros.volume <> 0
-
-  "
-) %>% 
-  dplyr::mutate( 
-    dia_de_la_semana = 
-      factor(
-        day_of_week,
-        levels = c(1, 2, 3, 4, 5, 6, 7),
-        labels = c("Lunes", "Martes", "Miercoles", "Jueves", "Viernes", "Sabado", "Domingo")
-      )
-  )
-```
-
 
 ```{r Densidad Velocidad, fig.cap="Densidad de Velocidad por Dia de la semana"}
 tabla %>%
@@ -428,20 +352,6 @@ cor(velocidad_volumen)
 
 Pasemos a investigar las calles con mayor promedio de velocidad.
 
-```{r Importar datos de velocidad-calle, echo = FALSE }
-velocidad_calles <- DBI::dbGetQuery(
-  con,
-  "
-  SELECT d_sensores.dsc_avenida,
-    AVG(velocidad) AS velocidad_promedio
-  FROM fct_registros
-  INNER JOIN d_sensores ON fct_registros.id_detector = d_sensores.id_detector
-  GROUP BY dsc_avenida
-  "
-  )
-```
-
-
 
 ```{r Calles con mayor promedio de velocidad, echo = FALSE, fig.cap="Calles con mayor promedio de velocidad"}
 avenidas <- c("18 de Julio","8 de Octubre","Agraciada", "Av Brasil", "Av Italia","Bv Artigas","Bv Batlle y Ordonez","Bv Espana","C M Ramirez","Centenario","Fernandez Crespo","Bolivia","Albo","Belloni","Benito Blanco","Burges","Garibaldi","Garzon","Gral Flores","Millan","Morquio","Ponce","Rambla","Ricaldoni","Rivera","Rodo","San Martin","Saravia", "Soca","Uruguay","Varela", "L A de Herrera")  
@@ -483,28 +393,6 @@ El siguiente gráfico nos muestra que las 3 calles con mas velocidad en promedio
 En promedio de velocidad circulacion los conductores son prudentes, aun asi vemos con que frecuencia se comenten excesos de velocidad.
 
 
-```{r Importar datos de exceso de velocidad, echo=FALSE }
-excesos <- DBI::dbGetQuery(
-  con,
-  "
-  SELECT d_sensores.dsc_avenida,
-    fct_registros.velocidad 
-  FROM fct_registros TABLESAMPLE SYSTEM (10)
-  JOIN d_sensores ON fct_registros.id_detector = d_sensores.id_detector
-  "
-  ) %>% 
-  mutate(
-    Tipo = ifelse(dsc_avenida %in% avenidas,
-                  "Avenida", "Calle"),
-    limite = ifelse(dsc_avenida %in% c("Bv Artigas",
-                                       "Rambla",
-                                       "Larranaga",
-                                       "Bv Batlle y Ordonez",
-                                       "Garzon"), 60, 45)
-  )
-```
-
-
 ```{r Grafico de , echo=FALSE, fig.cap = "Es netamente nula la proporcion de excesos de velocidad, podemos decir el los conductores en general respetan los limites de velocidad"}
 excesos %>% 
   filter(velocidad > limite) %>% 
@@ -542,41 +430,8 @@ excesos %>%
 Observemos el volumen y la velocidad promedio de todos los días de la semana
 
 ```{r promedios_semanales, echo=FALSE}
-promedios_semanales <- DBI::dbGetQuery(
-  con,
-  "
-  WITH tabla as (
-    SELECT
-      d_date.day_of_week as dia,
-      fct_registros.velocidad as velocidad,
-      fct_registros.volume as volumen
-    FROM fct_registros
-    LEFT JOIN d_date ON fct_registros.id_fecha = d_date.id_fecha
-    )
-    
-    
-    SELECT
-      avg(velocidad) as avg_velocidad,
-      avg(volumen) as avg_volumen,
-      dia
-    FROM tabla 
-    GROUP BY dia
-    "
-  ) %>%
-  mutate( 
-    dia_semana = 
-      factor(
-        dia,
-        levels = c(1, 2, 3, 4, 5, 6, 7),
-        labels = c("Lunes", "Martes", "Miercoles",
-                   "Jueves", "Viernes", "Sabado", "Domingo")
-        ) 
-    ) %>% 
-  pivot_longer(
-    cols = c("avg_velocidad", "avg_volumen"),
-    names_to = "variable",
-    values_to = "promedio"
-    ) %>%
+(
+  promedios_semanales %>%
   ggplot() +
   geom_col(
     aes(
@@ -608,66 +463,14 @@ promedios_semanales <- DBI::dbGetQuery(
   theme(
     legend.position = "bottom"
   ) 
+)
 
-promedios_semanales
 ```
 
 En el gráfico se puede observar: - La velocidad media se mantiene casi constante durante toda la semana, salvo una leve variación positiva los fines de semana. - El volumen medio de vehículos detectados por los radares va variando en la semana, alcanzado su pico los viernes. También es considerablemente inferior los fines de semana.
 
 
 Si bien previamente obsevamos leves exceos de velocidad, dentro de esos excesos se registran velocidades maximas de mas de 100km/h, veamos esos maximos pro franja horaria segun si fue registrado en un fin de semana o no
-```{r Tabla, echo = FALSE}
-registros_max_barrioxdiaxhora <- DBI::dbGetQuery(
-    con,
-    "
-      SELECT
-        d_date.day_of_week,
-        d_date.day_name,
-        d_date.month_actual,
-        d_date.month_name,
-        d_date.year_actual,
-        d_date.weekend_indr,
-        CASE
-          WHEN fct_registros.id_hora >= 0 AND fct_registros.id_hora < 100 THEN '00:00'
-          WHEN fct_registros.id_hora >= 100 AND fct_registros.id_hora < 200 THEN '01:00'
-          WHEN fct_registros.id_hora >= 200 AND fct_registros.id_hora < 300 THEN '02:00'
-          WHEN fct_registros.id_hora >= 300 AND fct_registros.id_hora < 400 THEN '03:00'
-          WHEN fct_registros.id_hora >= 400 AND fct_registros.id_hora < 500 THEN '04:00'
-          WHEN fct_registros.id_hora >= 500 AND fct_registros.id_hora < 600 THEN '05:00'
-          WHEN fct_registros.id_hora >= 600 AND fct_registros.id_hora < 700 THEN '06:00'
-          WHEN fct_registros.id_hora >= 700 AND fct_registros.id_hora < 800 THEN '07:00'
-          WHEN fct_registros.id_hora >= 800 AND fct_registros.id_hora < 900 THEN '08:00'
-          WHEN fct_registros.id_hora >= 900 AND fct_registros.id_hora < 1000 THEN '09:00'
-          WHEN fct_registros.id_hora >= 1000 AND fct_registros.id_hora < 1100 THEN '10:00'
-          WHEN fct_registros.id_hora >= 1100 AND fct_registros.id_hora < 1200 THEN '11:00'
-          WHEN fct_registros.id_hora >= 1200 AND fct_registros.id_hora < 1300 THEN '12:00'
-          WHEN fct_registros.id_hora >= 1300 AND fct_registros.id_hora < 1400 THEN '13:00'
-          WHEN fct_registros.id_hora >= 1400 AND fct_registros.id_hora < 1500 THEN '14:00'
-          WHEN fct_registros.id_hora >= 1500 AND fct_registros.id_hora < 1600 THEN '15:00'
-          WHEN fct_registros.id_hora >= 1600 AND fct_registros.id_hora < 1700 THEN '16:00'
-          WHEN fct_registros.id_hora >= 1700 AND fct_registros.id_hora < 1800 THEN '17:00'
-          WHEN fct_registros.id_hora >= 1800 AND fct_registros.id_hora < 1900 THEN '18:00'
-          WHEN fct_registros.id_hora >= 1900 AND fct_registros.id_hora < 2000 THEN '19:00'
-          WHEN fct_registros.id_hora >= 2000 AND fct_registros.id_hora < 2100 THEN '20:00'
-          WHEN fct_registros.id_hora >= 2100 AND fct_registros.id_hora < 2200 THEN '21:00'
-          WHEN fct_registros.id_hora >= 2200 AND fct_registros.id_hora < 2300 THEN '22:00'
-          WHEN fct_registros.id_hora >= 2300 AND fct_registros.id_hora <= 2359 THEN '23:00'
-        ELSE 'Unknown'
-      END AS hora_rango,
-        MAX(fct_registros.velocidad) AS max_velocidad,
-        MAX(fct_registros.volume) AS max_volumen,
-        AVG(fct_registros.velocidad) AS promedio_velocidad,
-        AVG(fct_registros.volume) AS promedio_volumen,
-        MAX(fct_registros.volumen_hora) as max_volumen_hora,
-        AVG(fct_registros.volumen_hora) as promedio_volumen_hora,
-        COUNT(fct_registros.velocidad) AS cant_registros
-    FROM fct_registros
-    INNER JOIN d_sensores ON fct_registros.id_detector = d_sensores.id_detector
-    LEFT JOIN d_date ON fct_registros.id_fecha = d_date.id_fecha
-    GROUP BY d_date.day_of_week, hora_rango, d_date.month_actual, d_date.year_actual, d_date.weekend_indr, d_date.day_name, d_date.month_name
-    "
-  )
-```
 
 
 ```{r Grafico de distribucion max_velocidad, echo = FALSE}
@@ -714,34 +517,6 @@ registros_max_barrioxdiaxhora %>%
 ```
 
 Ahora la desidad de velocidad durante los dias siempre se encuentran en un rango de (0,60]
-```{r Datos para densidad de velocidad, echo = FALSE}
-tabla <- DBI::dbGetQuery(
-  con,
-  "
-  SELECT
-    fct_registros.volume, 
-    fct_registros.velocidad,
-    d_date.day_of_week
-  FROM
-    fct_registros TABLESAMPLE SYSTEM (0.5)
-  INNER JOIN 
-    d_sensores ON fct_registros.id_detector = d_sensores.id_detector
-  INNER JOIN 
-    d_date ON fct_registros.id_fecha = d_date.id_fecha
-  WHERE
-    fct_registros.velocidad <> 0 AND fct_registros.volume <> 0
-
-  "
-) %>% 
-  mutate( 
-    dia_de_la_semana = 
-      factor(
-        day_of_week,
-        levels = c(1, 2, 3, 4, 5, 6, 7),
-        labels = c("Lunes", "Martes", "Miercoles", "Jueves", "Viernes", "Sabado", "Domingo")
-      )
-  )
-```
 
 
 ```{r, echo = FALSE, fig.cap="Densidad de Velocidad"}
@@ -808,69 +583,9 @@ Noche de la nostalgia?
 
 
 ```{r Meses presentes en la base de datos}
-(
-  registros_año_mes <- DBI::dbGetQuery(
-    con,
-    "
-       SELECT
-        count(*),
-    d_date.month_actual, d_date.year_actual
-    FROM fct_registros
-    LEFT JOIN d_date ON fct_registros.id_fecha = d_date.id_fecha
-    GROUP BY d_date.month_actual, d_date.year_actual
-
-    "
-  )
-)
+print(registros_año_mes)
 ```
 Haciendo una observacion de los meses cubiertos por los datos, nos hemos dado cuenta que Agosto solo esta representado por los datos del 2021.
-
-```{r Datos para mapa de calor}
-max_velocidad_hora_barrio <- DBI::dbGetQuery(
-    con,
-    "
-    SELECT
-      d_sensores.barrio,
-      MAX(fct_registros.velocidad) AS max_velocidad,
-      AVG(fct_registros.velocidad) AS avg_velocidad,
-      MAX(fct_registros.volume) AS max_volumen,
-      AVG(fct_registros.volume) AS avg_volumen,
-       CASE
-        WHEN fct_registros.id_hora >= 0 AND fct_registros.id_hora < 100 THEN '00:00'
-        WHEN fct_registros.id_hora >= 100 AND fct_registros.id_hora < 200 THEN '01:00'
-        WHEN fct_registros.id_hora >= 200 AND fct_registros.id_hora < 300 THEN '02:00'
-        WHEN fct_registros.id_hora >= 300 AND fct_registros.id_hora < 400 THEN '03:00'
-        WHEN fct_registros.id_hora >= 400 AND fct_registros.id_hora < 500 THEN '04:00'
-        WHEN fct_registros.id_hora >= 500 AND fct_registros.id_hora < 600 THEN '05:00'
-        WHEN fct_registros.id_hora >= 600 AND fct_registros.id_hora < 700 THEN '06:00'
-        WHEN fct_registros.id_hora >= 700 AND fct_registros.id_hora < 800 THEN '07:00'
-        WHEN fct_registros.id_hora >= 800 AND fct_registros.id_hora < 900 THEN '08:00'
-        WHEN fct_registros.id_hora >= 900 AND fct_registros.id_hora < 1000 THEN '09:00'
-        WHEN fct_registros.id_hora >= 1000 AND fct_registros.id_hora < 1100 THEN '10:00'
-        WHEN fct_registros.id_hora >= 1100 AND fct_registros.id_hora < 1200 THEN '11:00'
-        WHEN fct_registros.id_hora >= 1200 AND fct_registros.id_hora < 1300 THEN '12:00'
-        WHEN fct_registros.id_hora >= 1300 AND fct_registros.id_hora < 1400 THEN '13:00'
-        WHEN fct_registros.id_hora >= 1400 AND fct_registros.id_hora < 1500 THEN '14:00'
-        WHEN fct_registros.id_hora >= 1500 AND fct_registros.id_hora < 1600 THEN '15:00'
-        WHEN fct_registros.id_hora >= 1600 AND fct_registros.id_hora < 1700 THEN '16:00'
-        WHEN fct_registros.id_hora >= 1700 AND fct_registros.id_hora < 1800 THEN '17:00'
-        WHEN fct_registros.id_hora >= 1800 AND fct_registros.id_hora < 1900 THEN '18:00'
-        WHEN fct_registros.id_hora >= 1900 AND fct_registros.id_hora < 2000 THEN '19:00'
-        WHEN fct_registros.id_hora >= 2000 AND fct_registros.id_hora < 2100 THEN '20:00'
-        WHEN fct_registros.id_hora >= 2100 AND fct_registros.id_hora < 2200 THEN '21:00'
-        WHEN fct_registros.id_hora >= 2200 AND fct_registros.id_hora < 2300 THEN '22:00'
-        WHEN fct_registros.id_hora >= 2300 AND fct_registros.id_hora <= 2359 THEN '23:00'
-        ELSE 'Unknown'
-      END AS hora_rango
-    FROM fct_registros
-    INNER JOIN d_sensores ON
-      fct_registros.id_detector = d_sensores.id_detector
-    LEFT JOIN d_date ON
-      fct_registros.id_fecha = d_date.id_fecha
-    GROUP BY d_sensores.barrio, hora_rango
-    "
-  ) 
-```
 
 
 ```{r Mapa de calor, fig.cap="Mapa de calor de volumen maxima por barrio por rango de hora"}
@@ -913,30 +628,13 @@ Que velocidad promedio se espera según
 - es día o noche
 - volumen promedio
 
-```{r Datos para arbol, eval=FALSE}
-datos_arbol <- DBI::dbGetQuery(
-  con,
-  "
-  SELECT
-    AVG(fct_registros.volume) as avg_volumen,
-    AVG(fct_registros.velocidad) as avg_velocidad,
-    d_date.weekend_indr as esFinDeSemana,
-    CASE
-            WHEN fct_registros.id_hora >= 600 AND fct_registros.id_hora < 1900 THEN TRUE
-            ELSE FALSE
-    END AS esDeDia
-FROM fct_registros
-LEFT JOIN d_date ON fct_registros.id_fecha = d_date.id_fecha
-GROUP BY
-    fct_registros.id_detector,
-    esFinDeSemana,
-    esDeDia
-  "
-)
-
+```{r Datos para arbol}
 nrow(datos_arbol)
 ```
-```{r Arbol training, eval=FALSE}
+
+
+
+```{r Arbol training}
 intrain <- sample(x = 1:nrow(datos_arbol), size = nrow(datos_arbol)*0.7)
 
 training <- datos_arbol[intrain,]
@@ -946,12 +644,12 @@ arbol_vol <- rpart(avg_velocidad ~ esfindesemana + esdedia + avg_volumen, data =
 ```
 
 
-```{r Arbol Plot, eval=FALSE}
+```{r Arbol Plot}
 rpart.plot(arbol_vol, digits = (-5))
 
 ```
 
-```{r Arbol testing, eval=FALSE}
+```{r Arbol testing}
 rmse(arbol_vol, testing)
 ```
 El modelo se aleja alrededor de esa cantidad de kilometros de los datos reales
@@ -961,24 +659,6 @@ El modelo se aleja alrededor de esa cantidad de kilometros de los datos reales
 
 
 ```{r Datos Random Forest, eval=FALSE}
-forest_data <- DBI::dbGetQuery(
-  con,
-  "
-  SELECT
-    AVG(fct_registros.volume) as avg_volumen,
-    AVG(fct_registros.velocidad) as avg_velocidad,
-    MAX(fct_registros.volume) as max_volumen,
-    fct_registros.id_carril,
-    fct_registros.id_hora
-FROM fct_registros
-LEFT JOIN d_date ON fct_registros.id_fecha = d_date.id_fecha
-GROUP BY
-    fct_registros.id_detector,
-    fct_registros.id_carril,
-    fct_registros.id_hora
-  "
-)
-
 nrow(forest_data)
 ```
 

@@ -757,29 +757,58 @@ El horario donde se dispara es en la noche.
 
 # Modelo estadístico
 
-Cuantos vehículos van a pasar en la siguiente hora segun
+Que velocidad promedio se espera según 
 - es fin de semana
 - es día o noche
-- velocidad
+- volumen promedio
 
 ```{r, eval=FALSE}
 datos_arbol <- DBI::dbGetQuery(
   con,
   "
-    "
+  SELECT
+    AVG(fct_registros.volume) as avg_volumen,
+    AVG(fct_registros.velocidad) as avg_velocidad,
+    d_date.weekend_indr as esFinDeSemana,
+    CASE
+            WHEN fct_registros.id_hora >= 800 AND fct_registros.id_hora < 2000 THEN TRUE
+            ELSE FALSE
+    END AS esDeDia
+FROM fct_registros
+LEFT JOIN d_date ON fct_registros.id_fecha = d_date.id_fecha
+GROUP BY
+    fct_registros.id_detector,
+    esFinDeSemana,
+    esDeDia
+  "
 )
 
 ```
 
-Tarea para Fede
 ```{r, eval=FALSE}
-intrain <- sample(x = 1:nrow(datos_arbol), size = nrow(datos_arbol)*0.7)
+intrain <- sample(x = 1:nrow(datos_arbol), size = nrow(datos_arbol)*0.9)
+
 training <- datos_arbol[intrain,]
 testing <- datos_arbol[-intrain,]
-arbol_vol <- rpart(avg_velocidad ~ fin_de_semana + esDia + volumen, data = training)
+
+arbol_vol <- rpart(avg_velocidad ~ esfindesemana + esdedia + avg_volumen, data = training)
+
 rpart.plot(arbol_vol, digits = (-5))
 
 ```
+
+```{r}
+# Use the predict function to make predictions on the testing data
+testing$pred_avg_velocidad <- predict(arbol_vol, newdata = testing)
+
+# Calculate the mean squared error (MSE) to measure the accuracy of the model
+(
+  mse <- mean((testing$avg_velocidad - testing$pred_avg_velocidad)^2)
+)
+
+
+```
+
 
 
 

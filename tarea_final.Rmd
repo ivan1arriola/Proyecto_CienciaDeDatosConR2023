@@ -5,9 +5,9 @@ date: "`r Sys.Date()`"
 output: pdf_document
 bibliography: [packages.bib,bibliografia.bib]
 nocite: '@*'
-header-includes: #allows you to add in your own Latex packages
-- \usepackage{float} #use the 'float' package
-- \floatplacement{figure}{H} #make every figure with caption = h
+header-includes: 
+- \usepackage{float} 
+- \floatplacement{figure}{H} 
 ---
 
 ```{r setup, include=FALSE}
@@ -32,7 +32,6 @@ source(here::here("app", "utils.R"))
 library(randomForest)
 library(modelr)
 
-#source(here::here("importacionesDB.R"))
 ```
 
 ```{r Variables de Entorno, eval=FALSE, echo=FALSE}
@@ -183,7 +182,7 @@ En la base de datos la tabla principal es `fct_registros`
 # Análisis exploratorio
 
 ```{r Cargar Mapas, sensores, semaforos, message=FALSE, results='hide'}
-d_sensores <- DBI::dbGetQuery(
+d_sensores <- load_data("d_sensores.csv",
   con,
   "SELECT * FROM d_sensores"
   )
@@ -243,9 +242,9 @@ Comienzan desde Enero del 2021 hasta Mayo del 2023.
 
 ```{r Muestra aleatoria de velocidad y volumen}
 
-velocidad_volumen <- dbGetQuery(
-  conn = con,
-  statement = "
+velocidad_volumen <- load_data( "velocidad_volumen.csv",
+  con,
+  "
   SELECT 
     fct_registros.velocidad,
     fct_registros.volume as volumen

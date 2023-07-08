@@ -73,3 +73,22 @@ intToHour <- function(int) {
 }
 print("intToHour loaded")
 
+
+# Directorio de la carpeta "data"
+data_folder <- here::here("data")
+
+if (!dir.exists(data_folder)) {
+  dir.create(data_folder)
+}
+
+# Función para cargar datos desde archivos CSV o desde la base de datos
+load_data <- function(filename, con, query) {
+  if (file.exists(filename)) {
+    data <- read.csv(file.path(data_folder, filename))
+  } else {
+    data <- DBI::dbGetQuery(con, query)
+    write.csv(data, file.path(data_folder, filename), row.names = FALSE)
+  }
+  print(filename)
+  return(data)
+}

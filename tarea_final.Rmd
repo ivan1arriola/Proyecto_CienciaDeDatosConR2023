@@ -786,7 +786,7 @@ GROUP BY
 ```
 
 ```{r, eval=FALSE}
-intrain <- sample(x = 1:nrow(datos_arbol), size = nrow(datos_arbol)*0.9)
+intrain <- sample(x = 1:nrow(datos_arbol), size = nrow(datos_arbol)*0.7)
 
 training <- datos_arbol[intrain,]
 testing <- datos_arbol[-intrain,]
@@ -798,16 +798,17 @@ rpart.plot(arbol_vol, digits = (-5))
 ```
 
 ```{r}
-# Use the predict function to make predictions on the testing data
+
 testing$pred_avg_velocidad <- predict(arbol_vol, newdata = testing)
 
-# Calculate the mean squared error (MSE) to measure the accuracy of the model
-(
-  mse <- mean((testing$avg_velocidad - testing$pred_avg_velocidad)^2)
-)
+# Error Cuadrado Medio
+ecm <- mean((testing$avg_velocidad - testing$pred_avg_velocidad)^2)
 
+sqrt(ecm)
 
 ```
+El modelo se aleja alrededor de esa cantidad de kilometros de los datos reales
+
 
 
 

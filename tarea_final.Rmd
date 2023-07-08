@@ -5,9 +5,9 @@ date: "`r Sys.Date()`"
 output: pdf_document
 bibliography: [packages.bib,bibliografia.bib]
 nocite: '@*'
-header-includes: #allows you to add in your own Latex packages
-- \usepackage{float} #use the 'float' package
-- \floatplacement{figure}{H} #make every figure with caption = h
+header-includes: 
+- \usepackage{float} 
+- \floatplacement{figure}{H} 
 ---
 
 ```{r setup, include=FALSE}
@@ -32,7 +32,6 @@ source(here::here("app", "utils.R"))
 library(randomForest)
 library(modelr)
 
-#source(here::here("importacionesDB.R"))
 ```
 
 ```{r Variables de Entorno, eval=FALSE, echo=FALSE}
@@ -183,7 +182,7 @@ En la base de datos la tabla principal es `fct_registros`
 # Análisis exploratorio
 
 ```{r Cargar Mapas, sensores, semaforos, message=FALSE, results='hide'}
-d_sensores <- DBI::dbGetQuery(
+d_sensores <- load_data("d_sensores.csv",
   con,
   "SELECT * FROM d_sensores"
   )
@@ -243,9 +242,9 @@ Comienzan desde Enero del 2021 hasta Mayo del 2023.
 
 ```{r Muestra aleatoria de velocidad y volumen}
 
-velocidad_volumen <- dbGetQuery(
-  conn = con,
-  statement = "
+velocidad_volumen <- load_data( "velocidad_volumen.csv",
+  con,
+  "
   SELECT 
     fct_registros.velocidad,
     fct_registros.volume as volumen
@@ -319,7 +318,7 @@ Vamos a analizar la relacion entre el volumen de trefico, la velocidad, el dia d
 
 
 ```{r}
-tabla <- DBI::dbGetQuery(
+tabla <- load_data( "tabla.csv",
   con,
   "
   SELECT
@@ -429,7 +428,7 @@ cor(velocidad_volumen)
 Pasemos a investigar las calles con mayor promedio de velocidad.
 
 ```{r Importar datos de velocidad-calle, echo = FALSE }
-velocidad_calles <- DBI::dbGetQuery(
+velocidad_calles <- load_data( "velocidad_calles.csv",
   con,
   "
   SELECT d_sensores.dsc_avenida,
@@ -484,7 +483,7 @@ En promedio de velocidad circulacion los conductores son prudentes, aun asi vemo
 
 
 ```{r Importar datos de exceso de velocidad, echo=FALSE }
-excesos <- DBI::dbGetQuery(
+excesos <- load_data( "excesos.csv",
   con,
   "
   SELECT d_sensores.dsc_avenida,
@@ -542,7 +541,7 @@ excesos %>%
 Observemos el volumen y la velocidad promedio de todos los días de la semana
 
 ```{r promedios_semanales, echo=FALSE}
-promedios_semanales <- DBI::dbGetQuery(
+promedios_semanales <- load_data("promedios_semanales.csv",
   con,
   "
   WITH tabla as (
@@ -617,7 +616,7 @@ En el gráfico se puede observar: - La velocidad media se mantiene casi constant
 
 Si bien previamente obsevamos leves exceos de velocidad, dentro de esos excesos se registran velocidades maximas de mas de 100km/h, veamos esos maximos pro franja horaria segun si fue registrado en un fin de semana o no
 ```{r Tabla, echo = FALSE}
-registros_max_barrioxdiaxhora <- DBI::dbGetQuery(
+registros_max_barrioxdiaxhora <- load_data("registros_max_barrioxdiaxhora.csv",
     con,
     "
       SELECT
@@ -715,24 +714,7 @@ registros_max_barrioxdiaxhora %>%
 
 Ahora la desidad de velocidad durante los dias siempre se encuentran en un rango de (0,60]
 ```{r Datos para densidad de velocidad, echo = FALSE}
-tabla <- DBI::dbGetQuery(
-  con,
-  "
-  SELECT
-    fct_registros.volume, 
-    fct_registros.velocidad,
-    d_date.day_of_week
-  FROM
-    fct_registros TABLESAMPLE SYSTEM (0.5)
-  INNER JOIN 
-    d_sensores ON fct_registros.id_detector = d_sensores.id_detector
-  INNER JOIN 
-    d_date ON fct_registros.id_fecha = d_date.id_fecha
-  WHERE
-    fct_registros.velocidad <> 0 AND fct_registros.volume <> 0
-
-  "
-) %>% 
+tabla  %>% 
   mutate( 
     dia_de_la_semana = 
       factor(
@@ -809,7 +791,7 @@ Noche de la nostalgia?
 
 ```{r Meses presentes en la base de datos}
 (
-  registros_año_mes <- DBI::dbGetQuery(
+  registros_año_mes <- load_data("registros_año_mes.csv",
     con,
     "
        SELECT
@@ -826,7 +808,7 @@ Noche de la nostalgia?
 Haciendo una observacion de los meses cubiertos por los datos, nos hemos dado cuenta que Agosto solo esta representado por los datos del 2021.
 
 ```{r Datos para mapa de calor}
-max_velocidad_hora_barrio <- DBI::dbGetQuery(
+max_velocidad_hora_barrio <- load_data("max_velocidad_hora_barrio.csv",
     con,
     "
     SELECT
@@ -914,7 +896,7 @@ Que velocidad promedio se espera según
 - volumen promedio
 
 ```{r Datos para arbol, eval=FALSE}
-datos_arbol <- DBI::dbGetQuery(
+datos_arbol <- load_data("datos_arbol.csv",
   con,
   "
   SELECT
@@ -961,7 +943,7 @@ El modelo se aleja alrededor de esa cantidad de kilometros de los datos reales
 
 
 ```{r Datos Random Forest, eval=FALSE}
-forest_data <- DBI::dbGetQuery(
+forest_data <- load_data("forest_data.csv",
   con,
   "
   SELECT

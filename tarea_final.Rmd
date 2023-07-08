@@ -766,6 +766,49 @@ tabla %>%
   coord_cartesian(xlim = c(0, 100))
 ```
 
+
+
+
+
+
+
+
+
+```{r}
+registros_max_barrioxdiaxhora %>%
+  ggplot(
+    aes(
+      x =  max_velocidad,
+      fill = weekend_indr # esto añade el color según el factor esFinDeSemana
+    )
+  ) +
+  geom_density(alpha = 0.5) +
+  facet_wrap(~month_actual)
+  
+
+```
+Se observa un pico en Agosto
+Noche de la nostalgia?
+
+
+```{r}
+(
+  registros_año_mes <- DBI::dbGetQuery(
+    con,
+    "
+       SELECT
+        count(*),
+    d_date.month_actual, d_date.year_actual
+    FROM fct_registros
+    LEFT JOIN d_date ON fct_registros.id_fecha = d_date.id_fecha
+    GROUP BY d_date.month_actual, d_date.year_actual
+
+    "
+  )
+)
+```
+Haciendo una observacion de los meses cubiertos por los datos, nos hemos dado cuenta que Agosto solo esta representado por los datos del 2021.
+
 ```{r Datos para mapa de calor}
 max_velocidad_hora_barrio <- DBI::dbGetQuery(
     con,
@@ -813,76 +856,6 @@ max_velocidad_hora_barrio <- DBI::dbGetQuery(
   ) 
 ```
 
-
-Haciendo una observacion de los meses cubiertos por los datos, nos hemos dado cuenta que Agosto solo esta representado por los datos del 2021.
-
-
-```{r, eval=FALSE}
-registros_Agosto <- registros_Agosto %>% 
-  dplyr::mutate( 
-    dia_de_la_semana = 
-      factor(
-        day_of_week,
-        levels = c(1, 2, 3, 4, 5, 6, 7),
-        labels = c("Lunes", "Martes", "Miercoles", "Jueves", "Viernes", "Sabado", "Domingo")
-      )
-  )
-
-```
-
-
-```{r, eval=FALSE}
-registros_Agosto %>%  filter(year_actual == 2022)  %>%
-  ggplot(
-    aes(
-      x =  day_of_month,
-      fill = dia_de_la_semana
-    )
-  ) +
-  geom_col(
-    aes(
-      y = max_volumen_hora,
-    )
-  ) +
-  scale_x_continuous(
-    breaks = 1:31
-  )
-  
-```
-
-```{r}
-registros_max_barrioxdiaxhora %>%
-  ggplot(
-    aes(
-      x =  max_velocidad,
-      fill = esFinDeSemana # esto añade el color según el factor esFinDeSemana
-    )
-  ) +
-  geom_density(alpha = 0.5) +
-  facet_wrap(~month_actual)
-  
-
-```
-Se observa un pico en Agosto
-Noche de la nostalgia?
-
-
-```{r}
-(
-  registros_año_mes <- DBI::dbGetQuery(
-    con,
-    "
-       SELECT
-        count(*),
-    d_date.month_actual, d_date.year_actual
-    FROM fct_registros
-    LEFT JOIN d_date ON fct_registros.id_fecha = d_date.id_fecha
-    GROUP BY d_date.month_actual, d_date.year_actual
-
-    "
-  )
-)
-```
 
 ```{r Mapa de calor, fig.cap="Mapa de calor de volumen maxima por barrio por rango de hora"}
 max_velocidad_hora_barrio %>%

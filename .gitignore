@@ -35,7 +35,6 @@ po/*~
 rsconnect/
 Datos.zip
 Datos/
-data/
 *.csv
 *.xlsx
 *.xls

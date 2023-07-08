@@ -6,7 +6,6 @@ if (!dir.exists(data_folder)) {
   dir.create(data_folder)
 }
 
-
 #Coneccion a base de datos
 con <- DBI::dbConnect(
   RPostgres::Postgres(),

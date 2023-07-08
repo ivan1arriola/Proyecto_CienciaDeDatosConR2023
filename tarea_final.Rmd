@@ -31,6 +31,8 @@ library(rpart.plot)
 source(here::here("app", "utils.R"))
 library(randomForest)
 library(modelr)
+
+#source(here::here("importacionesDB.R"))
 ```
 
 ```{r Variables de Entorno, eval=FALSE, echo=FALSE}
@@ -785,7 +787,7 @@ tabla %>%
 
 
 
-```{r}
+```{r Densidades de max_velocidad x mes del año}
 registros_max_barrioxdiaxhora %>%
   ggplot(
     aes(
@@ -805,7 +807,7 @@ Se observa un pico en Agosto
 Noche de la nostalgia?
 
 
-```{r}
+```{r Meses presentes en la base de datos}
 (
   registros_año_mes <- DBI::dbGetQuery(
     con,
@@ -997,7 +999,7 @@ rmse(rf_avg_velocidad, testing)
 ```
 El modelo le erra por esa cantidad de kilometros/hora en promedio
 
-```{r Random Forest Plot}
+```{r Random Forest Plot, eval=FALSE}
 varImpPlot(rf_avg_velocidad)
 ```
 Este grafico muestra que variables son mas significativas para la prediccion del promedio de velocidad

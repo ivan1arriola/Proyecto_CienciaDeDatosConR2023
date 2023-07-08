@@ -5,10 +5,13 @@ date: "`r Sys.Date()`"
 output: pdf_document
 bibliography: [packages.bib,bibliografia.bib]
 nocite: '@*'
+header-includes: #allows you to add in your own Latex packages
+- \usepackage{float} #use the 'float' package
+- \floatplacement{figure}{H} #make every figure with caption = h
 ---
 
 ```{r setup, include=FALSE}
-knitr::opts_chunk$set(echo = FALSE)
+knitr::opts_chunk$set(echo = FALSE, fig.pos = "H", out.extra = "")
 ```
 
 ```{r Librerias , include = FALSE}
@@ -247,7 +250,6 @@ velocidad_volumen <- dbGetQuery(
 
 
 ```{r Distribucion de velocidad, fig.cap= "Boxplot de Velocidad"}
-library(ggplot2)
 
 promedio <- mean(velocidad_volumen$velocidad)
 
@@ -259,6 +261,13 @@ velocidad_volumen %>% ggplot() +
     breaks = seq(0, 145, 5)
   ) +
   
+  theme_minimal()
+
+```
+
+```{r Distribucion de velocidad Barras, fig.cap= ""}
+velocidad_volumen %>% ggplot() +
+  geom_bar(aes(velocidad)) +
   theme_minimal()
 
 ```
@@ -286,12 +295,12 @@ velocidad_volumen %>% ggplot() +
 
 ```
 
+
 Se puede ver que volumen es muy dispar en su distribucion
 
-```{r Distribucion de velocidad Barras, fig.cap= "Boxplot de Velocidad"}
+```{r Distribucion de Volumen Barras, fig.cap= ""}
 velocidad_volumen %>% ggplot() +
   geom_bar(aes(volumen)) +
-  scale_y_log10() +
   theme_minimal()
 
 ```
@@ -720,7 +729,7 @@ max_velocidad_hora_barrio %>%
     aes(
       x = barrio,
       y = hora_rango,
-      fill = max_volumen
+      fill = avg_volumen
     )
   ) +
   geom_tile() +
@@ -729,7 +738,7 @@ max_velocidad_hora_barrio %>%
   scale_x_discrete( name = "Barrio") +
   scale_y_discrete( name = "Hora") +
   scale_fill_continuous(
-    name =  "Max Volumen",
+    name =  "AVG Volumen",
     type = "viridis"
   )+
   theme(
@@ -756,34 +765,18 @@ Cuantos vehículos van a pasar en la siguiente hora segun
 ```{r, eval=FALSE}
 datos_arbol <- DBI::dbGetQuery(
   con,
-  "SELECT
-    AVG(fct_registros.volumen_hora),
-    d_date.weekend_indr AS fin_de_semana,
-    d_date.mmyyyy,
-    d_sensores.latitud,
-    d_sensores.longitud,
-     CASE
-            WHEN fct_registros.id_hora >= 800 AND fct_registros.id_hora < 2000 THEN 'DIA'
-            ELSE 'NOCHE'
-    END AS hora_rango,
-      CASE
-            WHEN fct_registros.velocidad >= 45 THEN 'SI'
-            ELSE 'NO'
-     END AS exceso_velocidad
-    FROM fct_registros
-    LEFT JOIN d_date ON fct_registros.id_fecha = d_date.id_fecha
-    LEFT JOIN d_sensores ON fct_registros.id_detector = d_sensores.id_detector
-    GROUP BY d_date.weekend_indr,hora_rango, d_date.mmyyyy, d_sensores.latitud, d_sensores.longitud, exceso_velocidad
+  "
     "
 )
 
 ```
 
+Tarea para Fede
 ```{r, eval=FALSE}
 intrain <- sample(x = 1:nrow(datos_arbol), size = nrow(datos_arbol)*0.7)
 training <- datos_arbol[intrain,]
 testing <- datos_arbol[-intrain,]
-arbol_vol <- rpart(avg ~ fin_de_semana + hora_rango + exceso_velocidad, data = training)
+arbol_vol <- rpart(avg_velocidad ~ fin_de_semana + esDia + volumen, data = training)
 rpart.plot(arbol_vol, digits = (-5))
 
 ```
@@ -955,7 +948,7 @@ registros_max_barrioxdiaxhora %>%
 
 ```
 Se observa un pico en Agosto
-Dia de la nostalgia?
+Noche de la nostalgia?
 
 
 ```{r}
@@ -976,8 +969,6 @@ Dia de la nostalgia?
 ```
 
 Haciendo una observacion de los meses cubiertos por los datos, nos hemos dado cuenta que Agosto solo esta representado por los datos del 2021.
-
-
 
 
 ```{r, eval=FALSE}

@@ -1,0 +1,16 @@
+---
+title: "Tarea Final"
+author: "Arriola, Miquelerena, Rovetta"
+date: "`r Sys.Date()`"
+output: pdf_document
+bibliography: [packages.bib,bibliografia.bib]
+nocite: '@*'
+header-includes: 
+- \usepackage{float} 
+- \floatplacement{figure}{H} 
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = FALSE, fig.pos = "H", out.extra = "")
+```
+

@@ -1,18 +1,31 @@
 # Interfaz ---------------------------------------------------------------------
 intervalos <- c(
-  '00:00 - 01:59',
-  '02:00 - 03:59',
-  '04:00 - 05:59',
-  '06:00 - 07:59',
-  '08:00 - 09:59',
-  '10:00 - 11:59',
-  '12:00 - 13:59',
-  '14:00 - 15:59',
-  '16:00 - 17:59',
-  '18:00 - 19:59',
-  '20:00 - 21:59',
-  '22:00 - 23:59'
+  '00:00',
+  '01:00',
+  '02:00',
+  '03:00',
+  '04:00',
+  '05:00',
+  '06:00',
+  '07:00',
+  '08:00',
+  '09:00',
+  '10:00',
+  '11:00',
+  '12:00',
+  '13:00',
+  '14:00',
+  '15:00',
+  '16:00',
+  '17:00',
+  '18:00',
+  '19:00',
+  '20:00',
+  '21:00',
+  '22:00',
+  '23:00'
 )
+
 
 mapa <- function(ns) {
   box(
@@ -36,11 +49,6 @@ checkboxes <- function(ns) {
     width = NULL,
     solidHeader = TRUE,
     checkboxInput(
-      inputId = ns("valor_semaforo"),
-      label = "Semaforos",
-      value = FALSE
-    ),
-    checkboxInput(
       inputId = ns("valor_barrio"),
       label = "Barrios",
       value = FALSE
@@ -62,7 +70,6 @@ conditional_panel_sensor <- function(ns) {
         ns("sensor_color"),
         "Colorear sensor segun:",
         c(
-          "Semaforos" = "semaforo",
           "Barrios" = "barrio",
           "Sensores" = "sensor"
         )
@@ -83,16 +90,19 @@ conditional_panel_barrio <- function(ns) {
         c(
           "Velocidad Maxima registrada" = "velocidadMax",
           "Volumen Max x Hora" = "volumenMax",
+          "Promedio de volumen x hora" = "avg_volumen",
           "Nombre del Barrio" = "barrio"
         ),
-        selected = "volumenMax"
+        selected = "barrio"
 
       ),
-      selectInput(
-        ns("hora"),
-        "Seleccione un rango de horas",
-        intervalos,
-        selected = intervalos[1]
+      sliderInput(
+        inputId =  ns("hora"),
+        label = "Seleccione un rango de horas",
+        min = 0,
+        max = length(intervalos) - 1,
+        value = 0,
+        step = 1
       ),
       selectInput(
         ns("dia"),
@@ -103,6 +113,7 @@ conditional_panel_barrio <- function(ns) {
     )
   )
 }
+
 
 mapa_ui <- function(id) {
   ns <- NS(id)
@@ -141,6 +152,8 @@ mapa_server <- function(input, output, session) {
       inner_join(mvd_map_fixed, by = c("barrio" = "nombbarr")) %>%
       select(barrio, max_velocidad, max_volumen, cant_registros, geometry)
 
+    print(registros_filtrados)
+
     return(registros_filtrados)
   }
 
@@ -170,19 +183,6 @@ mapa_server <- function(input, output, session) {
       )
   })
 
-  observe({
-    if (input$valor_semaforo) {
-      leafletProxy("map") %>%
-        addMarkers(
-          data = sf::st_transform(capaSemafotos, crs = 4326),
-          icon = semaforoIcon,
-          group = "Semaforo"
-        )
-    } else {
-      leafletProxy("map") %>%
-        clearGroup(group = "Semaforo")
-    }
-  })
 
   observe({
     if (input$valor_sensor) {
@@ -204,8 +204,10 @@ mapa_server <- function(input, output, session) {
     if (input$valor_barrio) {
       
       dia_semana <- input$dia
-    
-      rango_hora <- input$hora
+
+      rango_hora <- intervalos[input$hora + 1]
+
+      print(rango_hora)
       
 
       map_mvd_max <- generar_mapa(dia_semana, rango_hora)

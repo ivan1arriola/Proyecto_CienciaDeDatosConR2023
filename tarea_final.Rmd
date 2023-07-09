@@ -42,28 +42,28 @@ usethis::edit_r_environ(
 
 # Introducción
 
-Datos de trafico
+Esto es un analisis descriptivo de los datos del trafico de Montevideo, Uruguay.
 
 # Datos
 
 ## Descripción general de los datos
 
-Los datos utilizados son estos
+Todos los datos fueron sacados de Catalogo de Datos Abiertos de gub.uy.
+En particular, los datos elegidos son los siguientes
 
 -   [Conteo vehicular en las principales avenidas de Montevideo](https://catalogodatos.gub.uy/dataset/intendencia-montevideo-conteo-de-vehiculos-del-centro-de-gestion-de-la-movilidad)
 -   [Velocidad promedio vehicular en las principales avenidas de Montevideo](https://catalogodatos.gub.uy/dataset/intendencia-montevideo-velocidad-promedio-vehicular-en-las-principales-avenidas-de-montevideo)
 -   [Ubicación de sensores de medición de conteo vehículos](https://catalogodatos.gub.uy/dataset/intendencia-montevideo-ubicacion-de-sensores-de-medicion-de-conteo-vehiculos)
--   [Semaforos](https://geoweb.montevideo.gub.uy/geonetwork/srv/spa/catalog.search#/metadata/d2da8cdd-c718-4eeb-9825-7069498b29c2)
 
-Todos provenientes de la Intendencia de Montevideo
 
-### Observaciones
+Los tres dataset son mantenidos por la Intendencia de Montevideo.
 
-Los datos son mensuales. Van desde Enero 2021 hasta Abril 2023. Los datos de los semaforos son de septiembre del 2014
 
 ### Descripcion de variables
 
-**Conjunto de datos: Conteo vehicular en las principales avenidas de Montevideo**
+Originalmente los datos vienen presentados de la siguiente forma:
+
+#### Conteo vehicular en las principales avenidas de Montevideo
 
 -   `cod_detector`: Entero - ID de la cámara que monitorea un carril específico para detectar vehículos.
 -   `id_carril`: Entero - Número del carril monitoreado (1, 2, 3, ...).
@@ -77,7 +77,7 @@ Los datos son mensuales. Van desde Enero 2021 hasta Abril 2023. Los datos de los
 -   `volumen`: Entero - Cantidad de vehículos detectados en el carril en los últimos 5 minutos.
 -   `volumen_hora`: Entero - Cantidad de vehículos detectados en el carril en la última hora.
 
-**Conjunto de datos: Velocidad promedio vehicular en las principales avenidas de Montevideo**
+#### Velocidad promedio vehicular en las principales avenidas de Montevideo
 
 -   `cod_detector`: Entero - ID de la cámara que monitorea un carril específico para detectar vehículos.
 -   `id_carril`: Entero - Número del carril monitoreado (1, 2, 3, ...).
@@ -90,7 +90,7 @@ Los datos son mensuales. Van desde Enero 2021 hasta Abril 2023. Los datos de los
 -   `longitud`: Float - Longitud del lugar de medición.
 -   `velocidad_promedio`: Entero - Promedio de las velocidades de los autos que circularon por el carril durante los últimos 5 minutos.
 
-**Conjunto de datos: Ubicación de sensores de medición de conteo vehículos**
+#### Ubicación de sensores de medición de conteo vehículos
 
 -   `dsc_avenida`: Texto - Nombre de la avenida donde se encuentra el sensor o cámara y donde se mide el tránsito.
 -   `dsc_int_anterior`: Texto - Nombre de la vía que forma el cruce desde donde vienen los vehículos.
@@ -98,11 +98,11 @@ Los datos son mensuales. Van desde Enero 2021 hasta Abril 2023. Los datos de los
 -   `latitud`: Float - Coordenada que indica la latitud de la ubicación del sensor.
 -   `longitud`: Float - Coordenada que indica la longitud de la ubicación del sensor.
 
-Sobre estos datos en particular, son *100 sensores* que se van cambiando de ubicacion mes a mes
+Sobre estos datos en particular, son *100 sensores* que se van cambiando de ubicación mes a mes
 
 ## Base de Datos
 
-Debido a que los datos utilizados, están estrechamente relacionados y a su vez son sumamente masivos, hemos decidido utilizar una base de datos relacionales.
+Debido a que los datos utilizados están estrechamente relacionados y a su vez son sumamente masivos, hemos decidido utilizar una base de datos.
 
 ```{r Coneccion a Base de Datos, include = FALSE}
 con <- DBI::dbConnect(
@@ -117,7 +117,9 @@ con <- DBI::dbConnect(
 
 ![Diagrama de la base de datos](app/media/fct_registros.png "Diagrama de la base de datos"){width="300" height="600"}
 
-En la base de datos la tabla principal es `fct_registros`
+En la base de datos la tabla principal es `fct_registros`.
+
+Así es como quedan los datos en las diferentes 
 
 ### Tabla: fct_registros
 
@@ -191,7 +193,6 @@ mvd_map_fixed <- st_make_valid(st_transform(mvd_map, crs = 4326))
 puntos_sensores <- d_sensores %>% 
   select(barrio, latitud, longitud) %>%
   mutate(transformarCoord(latitud, longitud, mvd_map))
-capaSemafotos <- st_read(here::here('app',"data", "v_int_semaforos", "v_int_semaforos.shp"))
 
 ```
 
@@ -412,7 +413,7 @@ velocidad_volumen_muestra %>% ggplot() + geom_point(
 )
 
 ```
-Definitivamente no hay una relacion lineal entre velocidad y volumen
+Definitivamente **no hay una relacion lineal** entre velocidad y volumen
 
 ```{r Correlacion de velocidad y volumen}
 cor(velocidad_volumen)
@@ -616,7 +617,7 @@ En el gráfico se puede observar: - La velocidad media se mantiene casi constant
 
 Si bien previamente obsevamos leves exceos de velocidad, dentro de esos excesos se registran velocidades maximas de mas de 100km/h, veamos esos maximos pro franja horaria segun si fue registrado en un fin de semana o no
 ```{r Tabla, echo = FALSE}
-registros_max_barrioxdiaxhora <- load_data("registros_max_barrioxdiaxhora.csv",
+registros_maximos_hora <- load_data("registros_maximos_hora.csv",
     con,
     "
       SELECT
@@ -669,27 +670,43 @@ registros_max_barrioxdiaxhora <- load_data("registros_max_barrioxdiaxhora.csv",
 ```
 
 
-```{r Grafico de distribucion max_velocidad, echo = FALSE}
-mediana <- registros_max_barrioxdiaxhora %>% 
+```{r Grafico de distribucion max_velocidad por hora, echo = FALSE}
+mediana <- registros_maximos_hora %>% 
   summarise(mediana = median(max_velocidad))
 mediana <- as.numeric(mediana)
 
-registros_max_barrioxdiaxhora %>%
+my_labeller <- function(x) {
+  ifelse(x, "Fin de semana", "Entre semana")
+}
+
+registros_maximos_hora %>%
   ggplot(
     aes(
       x = max_velocidad,
       y = fct_rev(hora_rango)
     )
   ) +
-  geom_boxplot() +
-  geom_point(
-    position = position_jitter(w=0, h=0.2),
-    alpha = 0.2,
-    aes(color = day_name)
+  geom_boxplot(
+    aes(
+      fill=hora_rango
+    )
   ) +
   stat_summary(fun = mean, geom = "point", size = 3, alpha = 0.6) +
   geom_vline(xintercept = mediana) +
-  facet_grid(~weekend_indr)
+  facet_grid(
+    ~weekend_indr,
+    labeller = as_labeller(my_labeller)
+  )+
+  theme(
+    legend.position = "none"
+  ) +
+  scale_x_continuous(
+    name = "Velocidad Maxima Registrada"
+  ) +
+  scale_y_discrete(
+    name= "Hora del día"
+  )
+
 ```
 Entre las 00:00 y las 08:00 es donde se alcanzan picos de casi 140 km/h, luego de ese rango se reduce la tendencia por ser horario laboral para luego crecer a medida de que cae la noche.
 Durante el fin de semana las velocidades máximas durante el horario laboral de lunes a viernes es totalmente diferente, los conductores durante el fin de semana aprovechan la baja de volumen para circular mas rápido.
@@ -697,7 +714,7 @@ Durante el fin de semana las velocidades máximas durante el horario laboral de 
 
 Si entramos en cada año vemos como crece la densidad de velocidad máxima registrada de lunes a viernes, 
 ```{r, echo = FALSE, fig.cap = '2023 no esta completo, vamos a profundizar mas en nuestro modelo predictivo'}
-registros_max_barrioxdiaxhora %>%
+registros_maximos_hora %>%
   ggplot(
     aes(
       x =  max_velocidad,
@@ -709,21 +726,21 @@ registros_max_barrioxdiaxhora %>%
     kernel = "epanechnikov"
   ) +
   facet_grid(~year_actual) +
-  theme(legend.position = "bottom")
+  theme(legend.position = "bottom")+
+  scale_x_continuous(
+    name = "Velocidad Maxima Registrada"
+  )+
+  scale_y_continuous(
+    name = "Densidad"
+  ) +
+  scale_fill_discrete(
+    name = "Dias de la semana",
+    labels = c("Entre semana", "Fin de semana")
+  )
+  
 ```
 
-Ahora la desidad de velocidad durante los dias siempre se encuentran en un rango de (0,60]
-```{r Datos para densidad de velocidad, echo = FALSE}
-tabla  %>% 
-  mutate( 
-    dia_de_la_semana = 
-      factor(
-        day_of_week,
-        levels = c(1, 2, 3, 4, 5, 6, 7),
-        labels = c("Lunes", "Martes", "Miercoles", "Jueves", "Viernes", "Sabado", "Domingo")
-      )
-  )
-```
+Ahora la densidad de velocidad durante los dias siempre se encuentran en un rango de (0,60]
 
 
 ```{r, echo = FALSE, fig.cap="Densidad de Velocidad"}
@@ -770,7 +787,7 @@ tabla %>%
 
 
 ```{r Densidades de max_velocidad x mes del año}
-registros_max_barrioxdiaxhora %>%
+registros_maximos_hora %>%
   ggplot(
     aes(
       x =  max_velocidad,
@@ -781,7 +798,17 @@ registros_max_barrioxdiaxhora %>%
     alpha = 0.5,
     kernel = "epanechnikov"
   ) +
-  facet_wrap(~month_actual)
+  facet_wrap(~month_actual)+
+  scale_x_continuous(
+    name = "Velocidad Maxima Registrada"
+  )+
+  scale_y_continuous(
+    name = "Densidad"
+  ) +
+  scale_fill_discrete(
+    name = "Dias de la semana",
+    labels = c("Entre semana", "Fin de semana")
+  )
   
 
 ```
@@ -872,14 +899,78 @@ max_velocidad_hora_barrio %>%
   scale_fill_continuous(
     name =  "AVG Volumen",
     type = "viridis"
-  )+
+  ) +
   theme(
-    legend.position = "bottom"
+    axis.text.x = element_text(angle = 45, hjust = 1, size = 8),
+    axis.text.y = element_text(size = 5)
   )
+
+
 ```
 
-Casi todos los barrios donde se dispara el maximo de autos detectados en 5 minutos son los que tienen rambla.
-El horario donde se dispara es en la noche.
+En Parque Rodo hay valores altos durante la noche, que lo diferencia del resto de los barrios.
+
+```{r}
+max_velocidad_hora_PRodo <- load_data("max_velocidad_hora_PRodo.csv",
+    con,
+    "
+    SELECT
+    fct_registros.volume as volumen, 
+    fct_registros.volumen_hora, 
+    fct_registros.velocidad,
+    d_date.day_of_week,
+    CASE
+        WHEN fct_registros.id_hora >= 0 AND fct_registros.id_hora < 100 THEN '00:00'
+        WHEN fct_registros.id_hora >= 100 AND fct_registros.id_hora < 200 THEN '01:00'
+        WHEN fct_registros.id_hora >= 200 AND fct_registros.id_hora < 300 THEN '02:00'
+        WHEN fct_registros.id_hora >= 300 AND fct_registros.id_hora < 400 THEN '03:00'
+        WHEN fct_registros.id_hora >= 400 AND fct_registros.id_hora < 500 THEN '04:00'
+        WHEN fct_registros.id_hora >= 500 AND fct_registros.id_hora < 600 THEN '05:00'
+        WHEN fct_registros.id_hora >= 600 AND fct_registros.id_hora < 700 THEN '06:00'
+        WHEN fct_registros.id_hora >= 700 AND fct_registros.id_hora < 800 THEN '07:00'
+        WHEN fct_registros.id_hora >= 800 AND fct_registros.id_hora < 900 THEN '08:00'
+        WHEN fct_registros.id_hora >= 900 AND fct_registros.id_hora < 1000 THEN '09:00'
+        WHEN fct_registros.id_hora >= 1000 AND fct_registros.id_hora < 1100 THEN '10:00'
+        WHEN fct_registros.id_hora >= 1100 AND fct_registros.id_hora < 1200 THEN '11:00'
+        WHEN fct_registros.id_hora >= 1200 AND fct_registros.id_hora < 1300 THEN '12:00'
+        WHEN fct_registros.id_hora >= 1300 AND fct_registros.id_hora < 1400 THEN '13:00'
+        WHEN fct_registros.id_hora >= 1400 AND fct_registros.id_hora < 1500 THEN '14:00'
+        WHEN fct_registros.id_hora >= 1500 AND fct_registros.id_hora < 1600 THEN '15:00'
+        WHEN fct_registros.id_hora >= 1600 AND fct_registros.id_hora < 1700 THEN '16:00'
+        WHEN fct_registros.id_hora >= 1700 AND fct_registros.id_hora < 1800 THEN '17:00'
+        WHEN fct_registros.id_hora >= 1800 AND fct_registros.id_hora < 1900 THEN '18:00'
+        WHEN fct_registros.id_hora >= 1900 AND fct_registros.id_hora < 2000 THEN '19:00'
+        WHEN fct_registros.id_hora >= 2000 AND fct_registros.id_hora < 2100 THEN '20:00'
+        WHEN fct_registros.id_hora >= 2100 AND fct_registros.id_hora < 2200 THEN '21:00'
+        WHEN fct_registros.id_hora >= 2200 AND fct_registros.id_hora < 2300 THEN '22:00'
+        WHEN fct_registros.id_hora >= 2300 AND fct_registros.id_hora <= 2359 THEN '23:00'
+        ELSE 'Unknown'
+      END AS hora_rango
+  FROM
+    fct_registros TABLESAMPLE SYSTEM (30)
+  INNER JOIN 
+    d_sensores ON fct_registros.id_detector = d_sensores.id_detector
+  INNER JOIN 
+    d_date ON fct_registros.id_fecha = d_date.id_fecha
+  WHERE
+    fct_registros.velocidad <> 0 AND fct_registros.volume <> 0 AND d_sensores.barrio = 'PARQUE RODO'
+    "
+  ) 
+```
+
+
+```{r}
+max_velocidad_hora_PRodo %>% ggplot(
+  
+)+
+  geom_boxplot(
+    aes(
+      x= volumen,
+      y=hora_rango
+    )
+  ) 
+```
+
 
 
 
@@ -918,7 +1009,9 @@ GROUP BY
 
 nrow(datos_arbol)
 ```
-```{r Arbol training, eval=FALSE}
+
+
+```{r Arbol training}
 intrain <- sample(x = 1:nrow(datos_arbol), size = nrow(datos_arbol)*0.7)
 
 training <- datos_arbol[intrain,]
@@ -928,12 +1021,12 @@ arbol_vol <- rpart(avg_velocidad ~ esfindesemana + esdedia + avg_volumen, data =
 ```
 
 
-```{r Arbol Plot, eval=FALSE}
+```{r Arbol Plot}
 rpart.plot(arbol_vol, digits = (-5))
 
 ```
 
-```{r Arbol testing, eval=FALSE}
+```{r Arbol testing}
 rmse(arbol_vol, testing)
 ```
 El modelo se aleja alrededor de esa cantidad de kilometros de los datos reales
@@ -942,7 +1035,7 @@ El modelo se aleja alrededor de esa cantidad de kilometros de los datos reales
 ## Random Forest
 
 
-```{r Datos Random Forest, eval=FALSE}
+```{r Datos Random Forest}
 forest_data <- load_data("forest_data.csv",
   con,
   "
@@ -965,7 +1058,7 @@ nrow(forest_data)
 ```
 
 
-```{r Random Forest training, eval=FALSE}
+```{r Random Forest training}
 intrain <- sample(x = 1:nrow(forest_data), size = nrow(forest_data)*0.7)
 
 training <- forest_data[intrain,]
@@ -975,13 +1068,13 @@ rf_avg_velocidad <- randomForest(avg_velocidad~ .,data= training)
 ```
 
 
-```{r Random Forest testing, eval=FALSE}
+```{r Random Forest testing}
 #raiz cuadrada del error cuadratico medio
 rmse(rf_avg_velocidad, testing)
 ```
 El modelo le erra por esa cantidad de kilometros/hora en promedio
 
-```{r Random Forest Plot, eval=FALSE}
+```{r Random Forest Plot}
 varImpPlot(rf_avg_velocidad)
 ```
 Este grafico muestra que variables son mas significativas para la prediccion del promedio de velocidad

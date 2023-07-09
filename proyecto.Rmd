@@ -82,7 +82,7 @@ Originalmente los datos vienen presentados de la siguiente forma:
 -   `dsc_int_siguiente`: Texto - Nombre de la vía hacia donde se dirigen los vehículos.
 -   `latitud`: Float - Latitud del lugar de medición.
 -   `longitud`: Float - Longitud del lugar de medición.
--   `velocidad_promedio`: Numérico - Promedio de las velocidades de los autos que circularon por el carril durante los últimos 5 minutos.
+-   `velocidad_promedio`: Numérico - Promedio de las velocidades de los vehiculos que circularon por el carril durante los últimos 5 minutos.
 
 #### Ubicación de sensores de medición de conteo vehículos
 -   `dsc_avenida`: Texto - Nombre de la avenida donde se encuentra el sensor o cámara y donde se mide el tránsito.
@@ -118,22 +118,22 @@ Nuestra tabla principal será `fct_registros`.
     -   `id_registros`: *Numérico* (*Primary Key*).
     -   `id_carril`: *Numérico*.
     -   `id_fecha`: *Numérico* (*Foreign Key*, vinculado con `d_sensores`). La fecha de la que fue tomada el registro, tiene el formato *YYYY-MM-DD*
-    -   `id_hora`: *Numérico*. Hora en la que fue tomado el registro con formato *HH:MM*.
+    -   `id_hora`: *Numérico*. Hora en la que fue tomado el registro con formato *HHMM*.
     -   `id_detector`: *Numérico* (*Foreign Key*, cinculado con `d_date`).
-    -   `volume`: *Numérico*. Cantidad de autos que pasaron en los últimos 5 minutos.
-    -   `volumen_hora`: *Numérico*. Cantidad de autos que pasaron en un lapso de una hora.
-    -   `velocidad`: *Numérico*. Velocidad registrada, su unidad son kilómetoros por hora
+    -   `volume`: *Numérico*. Cantidad de vehiculos que pasaron en los últimos 5 minutos.
+    -   `volumen_hora`: *Numérico*. Cantidad de vehiculos que pasaron en la ultima hora.
+    -   `velocidad`: *Numérico*. Velocidad promedio de los vehiculos registrados en los utimos 5 minutos. Unidad en km/h
     
 ### Tabla: d_sensores
 -   Cantidad de datos: 273
 -   Variables de la tabla:
     -   `id_detector`: *Numérico* (*Primary Key*).
-    -   `dsc_avenida`: *Caracter*. Calle donde se encuentra el sensor.
-    -   `dsc_int_anterior`: *Caracter*. Cruce previo de la calle en `dsc_avenida`.
-    -   `dsc_int_siguiente`: *Caracter*. Cruce posterior de la calle en `dsc_avenida`. Estas dos juntas nos dirá que cada sensor se encuentra en *Avenida* entre *Anterior* y *Siguiente*.
+    -   `dsc_avenida`: *Texto*. Calle donde se encuentra el sensor.
+    -   `dsc_int_anterior`: *Texto*. Cruce previo de la calle en `dsc_avenida`.
+    -   `dsc_int_siguiente`: *Texto*. Cruce posterior de la calle en `dsc_avenida`. Estas dos juntas nos dirá que cada sensor se encuentra en *Avenida* entre *Anterior* y *Siguiente*.
     -   `latitud`: *Numérico continuo*.
     -   `longitud`: *Numérico continuo*. Junto a `latitud` nos indica las coordenadas geograficas del sensor.
-    -   `barrio`: *Caracter*. Esta variable fue creada a partir del paquete `geouy`
+    -   `barrio`: *Texto*. Esta variable fue creada a partir del paquete `geouy`
     
 ### Tabla: d_date
 -   Cantidad de datos: 3652
@@ -141,20 +141,20 @@ Nuestra tabla principal será `fct_registros`.
     -   `id_fecha`: *Numérico* (*Primary Key*)
     -   `date_actual`: *Fecha*. Secuencia de fechas desde el 01-01-2021 con formato *YYYY-MM-DD*
     -   `epoch`
-    -   `day_suffix`: *Caracter*. Fecha del dia abreviado.
-    -   `day_name`: *Caracter*. Nombre del día
+    -   `day_suffix`: *Texto*. Fecha del dia abreviado.
+    -   `day_name`: *Texto*. Nombre del día
     -   `day_of_week`: *Numérico*. Dia de la semana que indica 1 como lunes, 2 como martes, etc.
     -   `day_of_month`: *Numérico*. Fecha del mes, va desde 1 hasta 31.
     -   `day_of_quarter`: *Numérico*. Dia del cuatrimestre.
     -   `day_of_year`: *Numérico*. Dia del año, del 1 al 366.
     -   `week_of_month`: *Numérico*. Semana de cada mes, valores del 1 al 5.
     -   `week_of_year`: *Numérico*. Semana del año, valores del 1 al 53.
-    -   `week_of_year_iso`: *Caracter*. Variable que combina el año, la semana del año y el día de la semana.
+    -   `week_of_year_iso`: *Texto*. Variable que combina el año, la semana del año y el día de la semana.
     -   `month_actual`: *Numérico*. Mes del año tomado como numero, enero como 1, febrero como 2 y así sucesivamente.
-    -   `month_name`: *Caracter*. Mes del año traducido en texto, de enero a diciembre
-    -   `month_name_abbreviated`: *Caracter*. Mes del año en formato abreviado.
+    -   `month_name`: *Texto*. Mes del año traducido en texto, de enero a diciembre
+    -   `month_name_abbreviated`: *Texto*. Mes del año en formato abreviado.
     -   `quarter_actual`: *Numérico*. Indica el cuatrimestre correspondiente con numeros del 1 al 4.
-    -   `quarter_name`: *Caracter*. Indica el cuatrimestre en formato de texto, primero, segundo, tercero y cuarto.
+    -   `quarter_name`: *Texto*. Indica el cuatrimestre en formato de texto, primero, segundo, tercero y cuarto.
     -   `year_actual`: *Numérico*. Indica el año.
     -   `first_day_of_week`: *Fecha*. Indica el primer día de la semana que corresponde tal fecha.
     -   `last_day_of_week`: *Fecha*. Indica el ultimo día del rango de la semana correspondiente.
@@ -164,13 +164,132 @@ Nuestra tabla principal será `fct_registros`.
     -   `last_day_of_quarter`: *Fecha*. Limite superior que indica a que cuatrimestre corresponde cada fecha.
     -   `first_day_of_year`: *Fecha*. Limite inferior que indica a que año corresponde cada fecha.
     -   `last_day_of_year`: *Fecha*. Limite superior que indica a que año corresponde cada fecha.
-    -   `mmyyyy`: *Caracter*. Secuencia de caracteres que indica el mes y el año en formato MMYYY
-    -   `mmddyyyy`: *Caracter*. Secuencia de caracteres que indica el mes, la fecha y el año en formato MMDDYYY.
+    -   `mmyyyy`: *Numérico*. Secuencia de caracteres que indica el mes y el año en formato MMYYY
+    -   `mmddyyyy`: *Numérico*. Secuencia de caracteres que indica el mes, la fecha y el año en formato MMDDYYY.
     -   `weekend_indr`: *Lógico*. `TRUE` si la fecha tiene como dia de la semana sabado o domingo, `FALSE` en caso contrario. 
     -   `feriado`: *Lógico*. `TRUE` si la fecha correspondiente coincide con dias feriados en Uruguay, `FALSE` en caso contrario.
     
     
 # Análisis exploratorio
+
+En nuestro proyecto tenemos datos que tienen una dimension geo-espacial, por lo que es importante tener en cuenta
+que la información que tenemos no es homogenea. Tambien es importante tener en cuenta que la información que tenemos
+es de un periodo de tiempo acotado.
+
+Dicho esto, para empezar, me parecio adecuado comprobar la integridad de los datos, es decir, ver si tenemos datos
+faltantes o datos que no tienen sentido.
+
+## Datos faltantes
+
+```{r, echo = FALSE}
+# Cantidad de datos faltantes
+load_data('tabla_datos_null.csv',con, 
+"
+SELECT 'velocidad' AS atributo,
+       COUNT(*) AS cant_total,
+       SUM(CASE WHEN velocidad IS NULL THEN 1 ELSE 0 END) AS cant_null,
+       SUM(CASE WHEN velocidad = 0 THEN 1 ELSE 0 END) AS cant_0
+FROM fct_registros
+UNION ALL
+SELECT 'volumem_hora' AS atributo,
+       COUNT(*) AS cant_total,
+       SUM(CASE WHEN volumen_hora IS NULL THEN 1 ELSE 0 END) AS cant_null,
+       SUM(CASE WHEN volumen_hora = 0 THEN 1 ELSE 0 END) AS cant_0
+FROM fct_registros
+UNION ALL
+SELECT 'volume' AS atributo,
+       COUNT(*) AS cant_total,
+       SUM(CASE WHEN volume IS NULL THEN 1 ELSE 0 END) AS cant_null,
+       SUM(CASE WHEN volume = 0 THEN 1 ELSE 0 END) AS cant_0
+FROM fct_registros
+UNION ALL
+SELECT 'id_fecha' AS atributo,
+       COUNT(*) AS cant_total,
+       SUM(CASE WHEN id_fecha IS NULL THEN 1 ELSE 0 END) AS cant_null,
+       SUM(CASE WHEN id_fecha = 0 THEN 1 ELSE 0 END) AS cant_0
+FROM fct_registros
+UNION ALL
+SELECT 'id_detector' AS atributo,
+       COUNT(*) AS cant_total,
+       SUM(CASE WHEN id_detector IS NULL THEN 1 ELSE 0 END) AS cant_null,
+       0 AS cant_0
+FROM fct_registros;
+") %>% 
+  mutate(
+    porc_null = round(cant_null / cant_total * 100, 6),
+    porc_0 = round(cant_0 / cant_total * 100, 6)
+  )
+
+```
+En 2274 datos se perdio la informacion de la ubicacion del sensor, por lo que no sabemos de que calle se trata.
+En el 10.39% de los datos se detecto velocidad 0 y en el mismo porcentaje se detecto volumen 0, se tiene que averiguar
+si son en los mismos registros o no. 
+
+```{r, echo = FALSE}
+# Cantidad de datos que tienen velocidad 0 y volumen 0
+load_data('datos_0.csv',con,
+"
+SELECT COUNT(*) AS cant_total,
+       SUM(CASE WHEN velocidad = 0 AND volumen_hora = 0 THEN 1 ELSE 0 END) AS cant_0
+FROM fct_registros;
+") %>% 
+  mutate(
+    porc_0 = round(cant_0 / cant_total * 100, 6)
+  )
+```
+
+Las cantidades coinciden, por lo que se puede asumir que son registros donde el sensor no detecto ningun vehiculo.
+Indicando que el 10.39% de los datos son registros donde no se detecto ningun vehiculo.
+
+Sobre los datos faltantes de la ubicacion del sensor, son datos que no se pueden recuperar, por lo que se tendran
+que descartar.
+
+Se quiso averiguar en que fecha se perdio la informacion de la ubicacion del sensor, para ver si se podia recuperar
+la informacion de otra forma, pero no se pudo.
+
+```{r, echo = FALSE}
+# Fecha en la que se perdio la informacion de la ubicacion del sensor
+load_data('fecha_null.csv',con,
+"
+SELECT id_fecha,
+       COUNT(*) AS cant_total,
+       SUM(CASE WHEN id_detector IS NULL THEN 1 ELSE 0 END) AS cant_null
+FROM fct_registros
+GROUP BY id_fecha
+HAVING SUM(CASE WHEN id_detector IS NULL THEN 1 ELSE 0 END) > 0
+ORDER BY id_fecha;
+") %>% 
+  mutate(
+    porc_null = round(cant_null / cant_total * 100, 6)
+  )
+```
+
+```{r, echo = FALSE}
+datos_null <- load_data('datos_null.csv',
+  con,
+  "SELECT *
+  FROM fct_registros
+  WHERE id_detector IS NULL
+  "
+)
+
+datos_null$fecha <- as.Date(as.character(datos_null$id_fecha), format = "%Y%m%d")
+datos_null$hora <- datos_null$id_hora
+
+summary(datos_null)
+```
+
+Se puede ver que los datos faltantes de la ubicacion del sensor van desde el 24/07/2021 hasta el 31/07/2021.
+Tambien se puede ver que todos los datos faltantes son del carril 2.
+Quiza se podrian recuperar los datos de la ubicacion del sensor revisando los datos originales pero es irrelevante
+ya que son pocos datos y no afectan al analisis.
+
+
+## Ubicacion de los sensores
+
+Los datos que tenemos son de 100 sensores ubicados todos en Montevideo y estos van cambiando de ubicacion cada mes.
+Por lo que el primer paso es ver cuantas ubicaciones distintas tenemos y cuantos sensores hay en cada ubicacion.
+
 ```{r Cargar mapas y sensores,  message=FALSE, results='hide'}
 d_sensores <- load_data("d_sensores.csv",
   con,
@@ -183,9 +302,11 @@ puntos_sensores <- d_sensores %>%
   mutate(transformarCoord(latitud, longitud, mvd_map))
 ```
 
-Para empezar mostraremos la superficie de Montevideo alcanzada por la información de los sensores de la Intendencia.
-Esta información no alcanza a todos los barrios, en el siguiente mapa se puede visualizar la cantidad por barrio.
-```{r Cantidad de sensores por barrio, echo = FALSE, fig.cap = 'Los barrios que tienen sensores son 42 sobre 62 siendo los barrios de Buceo, Centro, Pocitos y Unión con mas de 20 sensores.'}
+Para mostrarlo, hemos decidido utilizar un mapa de Montevideo con los barrios y mostramos la cantidad de sensores ubicados en el.
+En el mapa se puede ver que los sensores estan ubicados en 42 de los 62 barrios de Montevideo.
+Los barrios que tienen sensores son 42 sobre 62 siendo los barrios de Buceo, Centro, Pocitos y Unión con mas de 20 sensores.
+
+```{r Cantidad de sensores por barrio, echo = FALSE, fig.cap = 'Mapa de Montevideo con cantidad de sensores por barrio.'}
 cant_sensores <- d_sensores %>%
   group_by(barrio) %>%  
   summarise(
@@ -209,6 +330,111 @@ ggplot() +
   theme(legend.position = "bottom")
 ```
 
+Ahora quiero mostrar la cantidad de datos que tenemos por ubicacion, para ver si hay alguna ubicacion en particular que
+tenga mas o menos datos que las demas.
+
+```{r Cantidad de datos por ubicacion, echo = FALSE}
+cant_datos_por_ubicacion <- load_data("cant_datos_por_ubicacion.csv",
+  con,
+  "
+    SELECT
+      id_detector,
+      d_date.mmyyyy,
+      COUNT(*) AS cant_datos
+    FROM fct_registros
+    LEFT JOIN d_date on d_date.id_fecha = fct_registros.id_fecha
+    GROUP BY id_detector, d_date.mmyyyy
+  "
+) %>% inner_join(
+  d_sensores %>% select(barrio, id_detector), by = c("id_detector" = "id_detector")
+) %>% inner_join(
+  cant_sensores, by = c("barrio" = "barrio")
+)
+```
+
+
+
+
+```{r PLOT Cantidad de datos por ubicacion, echo = FALSE, fig.cap = 'Cantidad de datos por ubicacion'}
+cant_datos_por_barrio <- cant_datos_por_ubicacion %>%
+  group_by(barrio) %>% 
+  summarise(
+    cant_datos = sum(cant_datos)
+  ) %>%
+  arrange(desc(cant_datos)) 
+
+cant_datos_por_barrio %>%
+  ggplot(aes(x = fct_reorder(barrio, cant_datos), y = cant_datos, fill = barrio)) +
+  geom_bar(stat = "identity", position = "stack") +
+  theme(axis.text.x = element_text(size= 5, angle = 45, hjust = 1)) +
+  scale_x_discrete(name = "Ubicacion") +
+  scale_y_continuous(labels = scales::comma, name = "Cantidad de datos") +
+  theme(
+    legend.position = 'none'
+  ) 
+
+```
+
+Se puede observar que la cantidad de datos por ubicacion no es para nada homogenea.
+Los barrios con mayor cantidad de datos aportados al dataset son Union, Pocitos, Tres Cruces, Buceo y Centro.
+Por otro lado Maroñas, Carrasco, Las Canteras y Cerrito son los que menos datos aportan.
+
+
+Ahora me interesaria saber cuales son los barrios mejores representados en el dataset, es decir, cuales son los barrios
+que tienen mas datos por metro cuadrado.
+
+primero calculo el area de cada barrio y luego calculo la cantidad de datos por metro cuadrado.
+
+```{r Mapa Montevideo con Area, echo = FALSE}
+mvd_map_con_area <- mvd_map_fixed %>% 
+  mutate(
+    area = as.numeric(st_area(mvd_map_fixed))
+  ) %>% arrange(area)
+
+```
+
+```{r Cantidad de datos por ubicacion ponderado por area, echo = FALSE}
+cant_datos_por_barrio_area <- cant_datos_por_ubicacion %>%
+  group_by(barrio) %>% 
+  summarise(
+    cant_datos = sum(cant_datos)
+  ) %>%
+  inner_join(
+    mvd_map_con_area %>% select(nombbarr, area), by = c("barrio" = "nombbarr")
+  ) %>%
+  mutate(
+    cant_datos_por_area = cant_datos / area
+  ) %>%
+  arrange(desc(cant_datos_por_area))
+```
+
+```{r PLOT Cantidad de datos por ubicacion ponderado por area, echo = FALSE, fig.cap = 'Cantidad de datos por ubicacion ponderado por area'}
+cant_datos_por_barrio_area %>%
+  ggplot(aes(x = fct_reorder(barrio, cant_datos_por_area), y = cant_datos_por_area, fill = barrio)) +
+  geom_bar(stat = "identity", position = "stack") +
+  theme(axis.text.x = element_text(size= 5, angle = 45, hjust = 1)) +
+  scale_x_discrete(name = "Ubicacion") +
+  scale_y_continuous(labels = scales::comma, name = "Cantidad de datos por metro cuadrado") +
+  theme(
+    legend.position = 'none'
+  )
+
+```
+
+Se puede observar que los barrios con mayor cantidad de datos por metro cuadrado son Pocitos,
+La Blanqueada, Jancito Vera, Centro y Tres Cruces.
+Por otro lado Maroñas, Carrasco, Las Canteras, Peñarol y Cerrito son los que menos datos aportan por metro cuadrado.
+
+
+## Velocidad
+
+
+
+
+
+
+
+
 Veamos ahora la distribucion de las velocidades registradas
 ```{r Muestra aleatoria de velocidad y volumen}
 velocidad_volumen <- dbGetQuery(
@@ -227,4 +453,7 @@ velocidad_volumen %>% ggplot() +
   geom_bar(aes(x = velocidad)) +
   theme_minimal()
 ```
+
+
+
 

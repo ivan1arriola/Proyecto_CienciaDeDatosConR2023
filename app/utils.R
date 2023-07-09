@@ -87,7 +87,7 @@ load_data <- function(filename, con, query) {
     data <- read.csv(file.path(data_folder, filename))
   } else {
     data <- DBI::dbGetQuery(con, query)
-    write.csv(data, file.path(data_folder, filename))
+    write.csv(data, file.path(data_folder, filename), row.names = FALSE)
   }
   return(data)
 }

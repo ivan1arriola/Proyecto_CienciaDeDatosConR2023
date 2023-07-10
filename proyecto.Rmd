@@ -313,6 +313,28 @@ Tambien se puede ver que todos los datos faltantes son del carril 2.
 Quiza se podrian recuperar los datos de la ubicacion del sensor revisando los datos originales pero es irrelevante
 ya que son pocos datos y no afectan al analisis.
 
+
+### Datos faltantes en la base de datos
+
+```{r Meses presentes en la base de datos}
+(
+  registros_año_mes <- load_data("registros_año_mes.csv",
+    con,
+    "
+       SELECT
+        count(*),
+    d_date.month_actual, d_date.year_actual
+    FROM fct_registros
+    LEFT JOIN d_date ON fct_registros.id_fecha = d_date.id_fecha
+    GROUP BY d_date.month_actual, d_date.year_actual
+
+    "
+  )
+)
+```
+Haciendo una observación de los meses cubiertos por los datos, nos hemos dado cuenta que faltan algunos meses en la base de datos
+
+
 ## Ubicacion de los sensores
 
 Los datos que tenemos son de 100 sensores ubicados todos en Montevideo y estos van cambiando de ubicacion cada mes.
@@ -723,84 +745,7 @@ excesos %>%
 
 ## 3. ¿Cómo va variando el volumen y velocidad medidos a traves de el tiempo?
 
-Observemos el volumen y la velocidad promedio de todos los días de la semana
-
-```{r promedios_semanales, echo=FALSE}
-promedios_semanales <- load_data("promedios_semanales.csv",
-  con,
-  "
-  WITH tabla as (
-    SELECT
-      d_date.day_of_week as dia,
-      fct_registros.velocidad as velocidad,
-      fct_registros.volume as volumen
-    FROM fct_registros
-    LEFT JOIN d_date ON fct_registros.id_fecha = d_date.id_fecha
-    )
-    
-    
-    SELECT
-      avg(velocidad) as avg_velocidad,
-      avg(volumen) as avg_volumen,
-      dia
-    FROM tabla 
-    GROUP BY dia
-    "
-  ) %>%
-  mutate( 
-    dia_semana = 
-      factor(
-        dia,
-        levels = c(1, 2, 3, 4, 5, 6, 7),
-        labels = c("Lunes", "Martes", "Miercoles",
-                   "Jueves", "Viernes", "Sabado", "Domingo")
-        ) 
-    ) %>% 
-  pivot_longer(
-    cols = c("avg_velocidad", "avg_volumen"),
-    names_to = "variable",
-    values_to = "promedio"
-    ) %>%
-  ggplot() +
-  geom_col(
-    aes(
-      x = dia_semana,
-      y = promedio,
-      fill = variable
-    ),
-    position = "dodge"
-  ) + 
-  geom_text(
-    aes( 
-      x = dia_semana, 
-      y = promedio, 
-      label = round(promedio, 2) 
-    ),
-    position = position_dodge2(width = 1),
-    vjust = -0.5
-  ) +
-  scale_fill_viridis_d(
-    option = "plasma",
-    name = "Variables:",
-    labels = c("Velocidad", "Cantidad de vehiculos")
-  ) +
-  labs(
-    x = "Dia de la semana",
-    y = "Promedio"
-  ) +
-  theme_bw() +
-  theme(
-    legend.position = "bottom"
-  ) 
-
-promedios_semanales
-```
-
-En el gráfico se puede observar: - La velocidad media se mantiene casi constante durante toda la semana, salvo una leve variación positiva los fines de semana. - El volumen medio de vehículos detectados por los radares va variando en la semana, alcanzado su pico los viernes. También es considerablemente inferior los fines de semana.
-
-
-Si bien previamente obsevamos leves exceos de velocidad, dentro de esos excesos se registran velocidades maximas de mas de 100km/h, veamos esos maximos pro franja horaria segun si fue registrado en un fin de semana o no
-```{r Tabla, echo = FALSE}
+```{r registros_maximos_hora, echo = FALSE}
 registros_maximos_hora <- load_data("registros_maximos_hora.csv",
     con,
     "
@@ -853,202 +798,6 @@ registros_maximos_hora <- load_data("registros_maximos_hora.csv",
   )
 ```
 
-
-```{r Grafico de distribucion max_velocidad por hora, echo = FALSE}
-mediana <- registros_maximos_hora %>% 
-  summarise(mediana = median(max_velocidad))
-mediana <- as.numeric(mediana)
-
-my_labeller <- function(x) {
-  ifelse(x, "Fin de semana", "Entre semana")
-}
-
-registros_maximos_hora %>%
-  ggplot(
-    aes(
-      x = max_velocidad,
-      y = fct_rev(hora_rango)
-    )
-  ) +
-  geom_boxplot(
-    aes(
-      fill=hora_rango
-    )
-  ) +
-  stat_summary(fun = mean, geom = "point", size = 3, alpha = 0.6) +
-  geom_vline(xintercept = mediana) +
-  facet_grid(
-    ~weekend_indr,
-    labeller = as_labeller(my_labeller)
-  )+
-  theme(
-    legend.position = "none"
-  ) +
-  scale_x_continuous(
-    name = "Velocidad Maxima Registrada"
-  ) +
-  scale_y_discrete(
-    name= "Hora del día"
-  )
-
-```
-Entre las 00:00 y las 08:00 es donde se alcanzan picos de casi 140 km/h, luego de ese rango se reduce la tendencia por ser horario laboral para luego crecer a medida de que cae la noche.
-Durante el fin de semana las velocidades máximas durante el horario laboral de lunes a viernes es totalmente diferente, los conductores durante el fin de semana aprovechan la baja de volumen para circular mas rápido.
-
-
-Si entramos en cada año vemos como crece la densidad de velocidad máxima registrada de lunes a viernes, 
-```{r, echo = FALSE, fig.cap = '2023 no esta completo, vamos a profundizar mas en nuestro modelo predictivo'}
-registros_maximos_hora %>%
-  ggplot(
-    aes(
-      x =  max_velocidad,
-      fill = weekend_indr
-    )
-  ) +
-  geom_density(
-    alpha = 0.5,
-    kernel = "epanechnikov"
-  ) +
-  facet_grid(~year_actual) +
-  theme(legend.position = "bottom")+
-  scale_x_continuous(
-    name = "Velocidad Maxima Registrada"
-  )+
-  scale_y_continuous(
-    name = "Densidad"
-  ) +
-  scale_fill_discrete(
-    name = "Dias de la semana",
-    labels = c("Entre semana", "Fin de semana")
-  )
-  
-```
-
-Ahora la densidad de velocidad durante los dias siempre se encuentran en un rango de (0,60]
-
-```{r}
-tabla <- load_data( "tabla.csv",
-  con,
-  "
-  SELECT
-    fct_registros.volume, 
-    fct_registros.velocidad,
-    d_date.day_of_week
-  FROM
-    fct_registros TABLESAMPLE SYSTEM (0.5)
-  INNER JOIN 
-    d_sensores ON fct_registros.id_detector = d_sensores.id_detector
-  INNER JOIN 
-    d_date ON fct_registros.id_fecha = d_date.id_fecha
-  WHERE
-    fct_registros.velocidad <> 0 AND fct_registros.volume <> 0
-
-  "
-) %>% 
-  dplyr::mutate( 
-    dia_de_la_semana = 
-      factor(
-        day_of_week,
-        levels = c(1, 2, 3, 4, 5, 6, 7),
-        labels = c("Lunes", "Martes", "Miercoles", "Jueves", "Viernes", "Sabado", "Domingo")
-      )
-  )
-```
-
-```{r, echo = FALSE, fig.cap="Densidad de Velocidad"}
-tabla %>%
-  ggplot() + 
-  geom_density(
-    aes(x = velocidad),
-    kernel = "epanechnikov"
-  ) +
-  facet_wrap(~dia_de_la_semana) + 
-  scale_x_continuous(breaks = seq(0, 150, 20),
-                     name = "Velocidad"
-  ) +
-  scale_y_continuous(
-    name= "Cantidad"
-  )
-```
-
-Con el volumen de trafico, hay una gran diferencia el domingo comparado con el resto de los dias, en todos los dias la mayoria de volumen se concentra en el rango (0,10] donde en dicho rango alcanza su pico de circulacion en todo Montevideo.
-
-
-
-```{r, echo = FALSE, fig.cap="Densidad de Volumen"}
-tabla %>%
-  ggplot() + 
-  geom_density(
-    aes(x = volume),
-    kernel = "epanechnikov"
-  ) +
-  facet_wrap(~dia_de_la_semana) +
-  scale_x_continuous(
-    name = "Volumen",
-    breaks = seq(0,100,10)
-  ) +
-  scale_y_continuous(
-    name= "Cantidad"
-  ) +
-  coord_cartesian(xlim = c(0, 100))
-```
-
-
-
-
-
-
-
-
-
-```{r Densidades de max_velocidad x mes del año}
-registros_maximos_hora %>%
-  ggplot(
-    aes(
-      x =  max_velocidad,
-      fill = weekend_indr # esto añade el color según el factor esFinDeSemana
-    )
-  ) +
-  geom_density(
-    alpha = 0.5,
-    kernel = "epanechnikov"
-  ) +
-  facet_wrap(~month_actual)+
-  scale_x_continuous(
-    name = "Velocidad Maxima Registrada"
-  )+
-  scale_y_continuous(
-    name = "Densidad"
-  ) +
-  scale_fill_discrete(
-    name = "Dias de la semana",
-    labels = c("Entre semana", "Fin de semana")
-  )
-  
-
-```
-Se observa un pico en Agosto
-Noche de la nostalgia?
-
-
-```{r Meses presentes en la base de datos}
-(
-  registros_año_mes <- load_data("registros_año_mes.csv",
-    con,
-    "
-       SELECT
-        count(*),
-    d_date.month_actual, d_date.year_actual
-    FROM fct_registros
-    LEFT JOIN d_date ON fct_registros.id_fecha = d_date.id_fecha
-    GROUP BY d_date.month_actual, d_date.year_actual
-
-    "
-  )
-)
-```
-Haciendo una observacion de los meses cubiertos por los datos, nos hemos dado cuenta que Agosto solo esta representado por los datos del 2021.
-
 ```{r Datos para mapa de calor}
 max_velocidad_hora_barrio <- load_data("max_velocidad_hora_barrio.csv",
     con,
@@ -1096,6 +845,72 @@ max_velocidad_hora_barrio <- load_data("max_velocidad_hora_barrio.csv",
   ) 
 ```
 
+```{r}
+tabla <- load_data( "tabla.csv",
+  con,
+  "
+  SELECT
+    fct_registros.volume, 
+    fct_registros.velocidad,
+    d_date.day_of_week
+  FROM
+    fct_registros TABLESAMPLE SYSTEM (0.5)
+  INNER JOIN 
+    d_sensores ON fct_registros.id_detector = d_sensores.id_detector
+  INNER JOIN 
+    d_date ON fct_registros.id_fecha = d_date.id_fecha
+  WHERE
+    fct_registros.velocidad <> 0 AND fct_registros.volume <> 0
+
+  "
+) %>% 
+  dplyr::mutate( 
+    dia_de_la_semana = 
+      factor(
+        day_of_week,
+        levels = c(1, 2, 3, 4, 5, 6, 7),
+        labels = c("Lunes", "Martes", "Miercoles", "Jueves", "Viernes", "Sabado", "Domingo")
+      )
+  )
+```
+
+```{r promedios_semanales, echo=FALSE}
+promedios_semanales <- load_data("promedios_semanales.csv",
+  con,
+  "
+  WITH tabla as (
+    SELECT
+      d_date.day_of_week as dia,
+      fct_registros.velocidad as velocidad,
+      fct_registros.volume as volumen
+    FROM fct_registros
+    LEFT JOIN d_date ON fct_registros.id_fecha = d_date.id_fecha
+    )
+    
+    
+    SELECT
+      avg(velocidad) as avg_velocidad,
+      avg(volumen) as avg_volumen,
+      dia
+    FROM tabla 
+    GROUP BY dia
+    "
+  ) %>%
+  mutate( 
+    dia_semana = 
+      factor(
+        dia,
+        levels = c(1, 2, 3, 4, 5, 6, 7),
+        labels = c("Lunes", "Martes", "Miercoles",
+                   "Jueves", "Viernes", "Sabado", "Domingo")
+        ) 
+    )
+```
+
+### Volumen
+Primero observemos como va variado volumen y volumen_hora
+
+#### Variacion por hora del dia
 
 ```{r Mapa de calor, fig.cap="Mapa de calor de volumen maxima por barrio por rango de hora"}
 max_velocidad_hora_barrio %>%
@@ -1123,68 +938,248 @@ max_velocidad_hora_barrio %>%
 
 ```
 
+
 En Parque Rodo hay valores altos durante la noche, que lo diferencia del resto de los barrios.
 
-```{r}
-max_velocidad_hora_PRodo <- load_data("max_velocidad_hora_PRodo.csv",
-    con,
-    "
-    SELECT
-    fct_registros.volume as volumen, 
-    fct_registros.volumen_hora, 
-    fct_registros.velocidad,
-    d_date.day_of_week,
-    CASE
-        WHEN fct_registros.id_hora >= 0 AND fct_registros.id_hora < 100 THEN '00:00'
-        WHEN fct_registros.id_hora >= 100 AND fct_registros.id_hora < 200 THEN '01:00'
-        WHEN fct_registros.id_hora >= 200 AND fct_registros.id_hora < 300 THEN '02:00'
-        WHEN fct_registros.id_hora >= 300 AND fct_registros.id_hora < 400 THEN '03:00'
-        WHEN fct_registros.id_hora >= 400 AND fct_registros.id_hora < 500 THEN '04:00'
-        WHEN fct_registros.id_hora >= 500 AND fct_registros.id_hora < 600 THEN '05:00'
-        WHEN fct_registros.id_hora >= 600 AND fct_registros.id_hora < 700 THEN '06:00'
-        WHEN fct_registros.id_hora >= 700 AND fct_registros.id_hora < 800 THEN '07:00'
-        WHEN fct_registros.id_hora >= 800 AND fct_registros.id_hora < 900 THEN '08:00'
-        WHEN fct_registros.id_hora >= 900 AND fct_registros.id_hora < 1000 THEN '09:00'
-        WHEN fct_registros.id_hora >= 1000 AND fct_registros.id_hora < 1100 THEN '10:00'
-        WHEN fct_registros.id_hora >= 1100 AND fct_registros.id_hora < 1200 THEN '11:00'
-        WHEN fct_registros.id_hora >= 1200 AND fct_registros.id_hora < 1300 THEN '12:00'
-        WHEN fct_registros.id_hora >= 1300 AND fct_registros.id_hora < 1400 THEN '13:00'
-        WHEN fct_registros.id_hora >= 1400 AND fct_registros.id_hora < 1500 THEN '14:00'
-        WHEN fct_registros.id_hora >= 1500 AND fct_registros.id_hora < 1600 THEN '15:00'
-        WHEN fct_registros.id_hora >= 1600 AND fct_registros.id_hora < 1700 THEN '16:00'
-        WHEN fct_registros.id_hora >= 1700 AND fct_registros.id_hora < 1800 THEN '17:00'
-        WHEN fct_registros.id_hora >= 1800 AND fct_registros.id_hora < 1900 THEN '18:00'
-        WHEN fct_registros.id_hora >= 1900 AND fct_registros.id_hora < 2000 THEN '19:00'
-        WHEN fct_registros.id_hora >= 2000 AND fct_registros.id_hora < 2100 THEN '20:00'
-        WHEN fct_registros.id_hora >= 2100 AND fct_registros.id_hora < 2200 THEN '21:00'
-        WHEN fct_registros.id_hora >= 2200 AND fct_registros.id_hora < 2300 THEN '22:00'
-        WHEN fct_registros.id_hora >= 2300 AND fct_registros.id_hora <= 2359 THEN '23:00'
-        ELSE 'Unknown'
-      END AS hora_rango
-  FROM
-    fct_registros TABLESAMPLE SYSTEM (30)
-  INNER JOIN 
-    d_sensores ON fct_registros.id_detector = d_sensores.id_detector
-  INNER JOIN 
-    d_date ON fct_registros.id_fecha = d_date.id_fecha
-  WHERE
-    fct_registros.velocidad <> 0 AND fct_registros.volume <> 0 AND d_sensores.barrio = 'PARQUE RODO'
-    "
+
+#### Variacion por dia de la semana
+
+
+
+
+```{r PLOT promedio volumen x dia de la semana, echo=FALSE, fig.cap="Promedio de variable Volumen por Dia de la semana}
+promedios_semanales %>% ggplot() +
+  geom_col(
+    aes(
+      x = dia_semana,
+      y = avg_volumen,
+    )
+  ) + 
+  geom_text(
+    aes( 
+      x = dia_semana, 
+      y = avg_volumen, 
+      label = round(avg_volumen, 2) 
+    ),
+    vjust = -0.5
+  ) +
+  labs(
+    x = "Dia de la semana",
+    y = "Promedio"
   ) 
 ```
 
 
-```{r}
-max_velocidad_hora_PRodo %>% ggplot(
-  
-)+
+
+```{r, echo = FALSE, fig.cap="Densidad de Volumen"}
+tabla %>%
+  ggplot() + 
+  geom_density(
+    aes(x = volume),
+    kernel = "epanechnikov"
+  ) +
+  facet_wrap(~dia_de_la_semana) +
+  scale_x_continuous(
+    name = "Volumen",
+    breaks = seq(0,100,10)
+  ) +
+  scale_y_continuous(
+    name= "Cantidad"
+  ) +
+  coord_cartesian(xlim = c(0, 100))
+```
+
+
+
+
+#### Variacion por mes del año
+
+
+#### Variacion por año
+
+
+
+
+
+
+### Velocidad
+Ahora observemos como va variando velocidad
+
+
+#### Variacion por hora del dia
+
+#### Variacion por dia de la semana
+
+```{r PLOT promedio velocidad x dia de la semana, echo=FALSE, fig.cap="Promedio de variable Velocidad por Dia de la semana}
+promedios_semanales %>% ggplot() +
+  geom_col(
+    aes(
+      x = dia_semana,
+      y = avg_velocidad,
+    )
+  ) + 
+  geom_text(
+    aes( 
+      x = dia_semana, 
+      y = avg_velocidad, 
+      label = round(avg_velocidad, 2) 
+    ),
+    vjust = -0.5
+  ) +
+  labs(
+    x = "Dia de la semana",
+    y = "Promedio"
+  ) 
+```
+
+```{r, echo = FALSE, fig.cap="Densidad de Velocidad"}
+tabla %>%
+  ggplot() + 
+  geom_density(
+    aes(x = velocidad),
+    kernel = "epanechnikov"
+  ) +
+  facet_wrap(~dia_de_la_semana) + 
+  scale_x_continuous(breaks = seq(0, 150, 20),
+                     name = "Velocidad"
+  ) +
+  scale_y_continuous(
+    name= "Densidad"
+  )
+```
+
+```{r Grafico de distribucion max_velocidad por hora, echo = FALSE}
+mediana <- registros_maximos_hora %>% 
+  summarise(mediana = median(max_velocidad))
+mediana <- as.numeric(mediana)
+
+my_labeller <- function(x) {
+  ifelse(x, "Fin de semana", "Entre semana")
+}
+
+registros_maximos_hora %>%
+  ggplot(
+    aes(
+      x = max_velocidad,
+      y = fct_rev(hora_rango)
+    )
+  ) +
   geom_boxplot(
     aes(
-      x= volumen,
-      y=hora_rango
+      fill=hora_rango
     )
-  ) 
+  ) +
+  stat_summary(fun = mean, geom = "point", size = 3, alpha = 0.6) +
+  geom_vline(xintercept = mediana) +
+  facet_grid(
+    ~weekend_indr,
+    labeller = as_labeller(my_labeller)
+  )+
+  theme(
+    legend.position = "none"
+  ) +
+  scale_x_continuous(
+    name = "Velocidad Maxima Registrada"
+  ) +
+  scale_y_discrete(
+    name= "Hora del día"
+  )
+
 ```
+Entre las 00:00 y las 08:00 es donde se alcanzan picos de casi 140 km/h, luego de ese rango se reduce la tendencia por ser horario laboral para luego crecer a medida de que cae la noche.
+Durante el fin de semana las velocidades máximas durante el horario laboral de lunes a viernes es totalmente diferente, los conductores durante el fin de semana aprovechan la baja de volumen para circular mas rápido.
+
+
+
+```{r Densidades de max_velocidad x mes del año}
+registros_maximos_hora %>%
+  ggplot(
+    aes(
+      x =  max_velocidad,
+      fill = weekend_indr # esto añade el color según el factor esFinDeSemana
+    )
+  ) +
+  geom_density(
+    alpha = 0.5,
+    kernel = "epanechnikov"
+  ) +
+  facet_wrap(~month_actual)+
+  scale_x_continuous(
+    name = "Velocidad Maxima Registrada"
+  )+
+  scale_y_continuous(
+    name = "Densidad"
+  ) +
+  scale_fill_discrete(
+    name = "Dias de la semana",
+    labels = c("Entre semana", "Fin de semana")
+  )
+  
+
+```
+
+
+
+#### Variacion por mes del año
+
+
+#### Variacion por año
+
+Si entramos en cada año vemos como crece la densidad de velocidad máxima registrada de lunes a viernes, 
+```{r, echo = FALSE, fig.cap = '2023 no esta completo, vamos a profundizar mas en nuestro modelo predictivo'}
+registros_maximos_hora %>%
+  ggplot(
+    aes(
+      x =  max_velocidad,
+      fill = weekend_indr
+    )
+  ) +
+  geom_density(
+    alpha = 0.5,
+    kernel = "epanechnikov"
+  ) +
+  facet_grid(~year_actual) +
+  theme(legend.position = "bottom")+
+  scale_x_continuous(
+    name = "Velocidad Maxima Registrada"
+  )+
+  scale_y_continuous(
+    name = "Densidad"
+  ) +
+  scale_fill_discrete(
+    name = "Dias de la semana",
+    labels = c("Entre semana", "Fin de semana")
+  )
+  
+```
+
+Ahora la densidad de velocidad durante los dias siempre se encuentran en un rango de (0,60]
+
+
+### Variacion conjunta de velocidad y volumen
+
+
+
+
+
+
+En el gráfico se puede observar: - La velocidad media se mantiene casi constante durante toda la semana, salvo una leve variación positiva los fines de semana. - El volumen medio de vehículos detectados por los radares va variando en la semana, alcanzado su pico los viernes. También es considerablemente inferior los fines de semana.
+
+
+Si bien previamente obsevamos leves exceos de velocidad, dentro de esos excesos se registran velocidades maximas de mas de 100km/h, veamos esos maximos pro franja horaria segun si fue registrado en un fin de semana o no
+
+
+
+
+
+
+
+
+
+
+Con el volumen de trafico, hay una gran diferencia el domingo comparado con el resto de los dias, en todos los dias la mayoria de volumen se concentra en el rango (0,10] donde en dicho rango alcanza su pico de circulacion en todo Montevideo.
+
+
 
 
 
@@ -1292,7 +1287,7 @@ forest_data <- load_data("forest_data.csv",
     MAX(fct_registros.volume) as max_volumen,
     fct_registros.id_carril,
     fct_registros.id_hora
-FROM fct_registros
+FROM fct_registros 
 LEFT JOIN d_date ON fct_registros.id_fecha = d_date.id_fecha
 GROUP BY
     fct_registros.id_detector,
@@ -1305,7 +1300,7 @@ nrow(forest_data)
 ```
 
 
-```{r Random Forest training}
+```{r Random Forest training, eval=FALSE}
 intrain <- sample(x = 1:nrow(forest_data), size = nrow(forest_data)*0.7)
 
 training <- forest_data[intrain,]
@@ -1315,13 +1310,13 @@ rf_avg_velocidad <- randomForest(avg_velocidad~ .,data= training)
 ```
 
 
-```{r Random Forest testing}
+```{r Random Forest testing, eval=FALSE}
 #raiz cuadrada del error cuadratico medio
 rmse(rf_avg_velocidad, testing)
 ```
 El modelo le erra por esa cantidad de kilometros/hora en promedio
 
-```{r Random Forest Plot}
+```{r Random Forest Plot, eval=FALSE}
 varImpPlot(rf_avg_velocidad)
 ```
 Este grafico muestra que variables son mas significativas para la prediccion del promedio de velocidad

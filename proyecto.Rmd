@@ -402,7 +402,7 @@ cant_datos_por_ubicacion <- load_data("cant_datos_por_ubicacion.csv",
 )
 ```
 
-```{r PLOT Cantidad de datos por ubicacion, echo = FALSE, fig.cap = 'Cantidad de datos por ubicacion'}
+```{r Grafico  Cantidad de datos por ubicacion, echo = FALSE, fig.cap = 'Cantidad de datos por ubicacion'}
 cant_datos_por_barrio <- cant_datos_por_ubicacion %>%
   group_by(barrio) %>%
   summarise(
@@ -454,7 +454,7 @@ cant_datos_por_barrio_area <- cant_datos_por_ubicacion %>%
   arrange(desc(cant_datos_por_area))
 ```
 
-```{r PLOT Cantidad de datos por ubicacion ponderado por area, echo = FALSE, fig.cap = 'Cantidad de datos por ubicacion ponderado por area'}
+```{r Grafico  Cantidad de datos por ubicacion ponderado por area, echo = FALSE, fig.cap = 'Cantidad de datos por ubicacion ponderado por area'}
 cant_datos_por_barrio_area %>%
   ggplot(aes(x = fct_reorder(barrio, cant_datos_por_area), y = cant_datos_por_area, fill = barrio)) +
   geom_bar(stat = "identity", position = "stack") +
@@ -714,7 +714,7 @@ excesos <- load_data( "excesos.csv",
 ```
 
 
-```{r Grafico de , echo=FALSE, fig.cap = "Es netamente nula la proporcion de excesos de velocidad, podemos decir el los conductores en general respetan los limites de velocidad"}
+```{r Grafico de , fig.cap = "Es netamente nula la proporcion de excesos de velocidad, podemos decir el los conductores en general respetan los limites de velocidad"}
 excesos %>% 
   filter(velocidad > limite) %>% 
   group_by(dsc_avenida) %>%  
@@ -950,7 +950,7 @@ En Parque Rodo hay valores altos durante la noche, que lo diferencia del resto d
 
 
 
-```{r PLOT promedio volumen x dia de la semana, echo=FALSE, fig.cap="Promedio de variable Volumen por Dia de la semana}
+```{r }
 promedios_semanales %>% ggplot() +
   geom_col(
     aes(
@@ -998,7 +998,7 @@ Se puede notar un comportamiento casi idéntico en la cantidad de observaciones 
 
 #### Variacion de la velocidad por dia de la semana
 
-```{r PLOT promedio velocidad x dia de la semana, echo=FALSE, fig.cap="Promedio de variable Velocidad por Dia de la semana}
+```{r }
 promedios_semanales %>% ggplot() +
   geom_col(
     aes(

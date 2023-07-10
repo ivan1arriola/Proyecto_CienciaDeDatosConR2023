@@ -12,14 +12,45 @@ library(leaflet)
 library(bslib)
 library(shinydashboard)
 library(dplyr)
+library(ggplot2)
 library(sf)
 
 # Cargar modulos ----------------------------------------------------------
 
 source(paste0(moduleDir, "/Mapa.R"))
 source(paste0(moduleDir, "/Univariado.R"))
+source(paste0(moduleDir, "/Multivariado.R"))
 source("utils.R")
 
+
+# Variables globales ------------------------------------------------------
+
+intervalos <- c(
+  '00:00',
+  '01:00',
+  '02:00',
+  '03:00',
+  '04:00',
+  '05:00',
+  '06:00',
+  '07:00',
+  '08:00',
+  '09:00',
+  '10:00',
+  '11:00',
+  '12:00',
+  '13:00',
+  '14:00',
+  '15:00',
+  '16:00',
+  '17:00',
+  '18:00',
+  '19:00',
+  '20:00',
+  '21:00',
+  '22:00',
+  '23:00'
+)
 
 # Cargar Datos ------------------------------------------------------------
 
@@ -71,13 +102,9 @@ puntos_sensores <- d_sensores %>%
 
 
 ### registros maximos por rango hora, dia de la semana y barrio
-registros_max_file <- paste0(dataDir, "/registros_max_barrio_file.csv")
-if (file.exists(registros_max_file)) {
-  registros_max_barrioxdiaxhora <- readr::read_csv(registros_max_file)
-  
-} else {
-  registros_max_barrioxdiaxhora <- DBI::dbGetQuery(
-    con,
+registros_max_file <-  "registros_max_barrio_file.csv"
+
+registros_max_barrioxdiaxhora <- obtener_registros_max(registros_max_file, con,
     "
       SELECT
         d_sensores.barrio,
@@ -120,31 +147,16 @@ if (file.exists(registros_max_file)) {
     GROUP BY d_sensores.barrio, d_date.day_of_week, hora_rango
     "
   )
-  readr::write_csv(registros_max_barrioxdiaxhora, registros_max_file)
-  
-}
 
-registros_max_barrioxdiaxhora <- registros_max_barrioxdiaxhora %>% 
-  dplyr::mutate( 
-    dia_de_la_semana = 
-      factor(
-        day_of_week,
-        levels = c(1, 2, 3, 4, 5, 6, 7),
-        labels = c("Lunes", "Martes", "Miercoles", "Jueves", "Viernes", "Sabado", "Domingo")
-      )
-  )
+
 
 ### registros maximos por rango hora, dia de la semana y sensor
-registros_max_sensor_file <- paste0(dataDir, "/registros_max_sensor_file.csv")
-if (file.exists(registros_max_sensor_file)) {
-  registros_max_barrioxdiaxhora <- readr::read_csv(registros_max_sensor_file)
-  
-} else {
-  registros_max_barrioxdiaxhora <- DBI::dbGetQuery(
+registros_max_sensor_file <-"/registros_max_sensor_file.csv"
+registros_max_barrioxdiaxhora_sensor <- obtener_registros_max(registros_max_sensor_file,
     con,
     "
       SELECT
-        d_sensores.id_detector, dsc_avenida, dsc_int_anterior, dsc_int_siguiente, latitud, longitud, barrio,
+        d_sensores.barrio,
         d_date.day_of_week,
         CASE
             WHEN fct_registros.id_hora >= 0 AND fct_registros.id_hora < 100 THEN '00:00'
@@ -184,18 +196,4 @@ if (file.exists(registros_max_sensor_file)) {
     GROUP BY d_sensores.barrio, d_date.day_of_week, hora_rango, d_sensores.id_detector
     "
   )
-  readr::write_csv(registros_max_barrioxdiaxhora, registros_max_sensor_file)
-  
-}
-
-registros_max_barrioxdiaxhora <- registros_max_barrioxdiaxhora %>% 
-  dplyr::mutate( 
-    dia_de_la_semana = 
-      factor(
-       day_of_week,
-        levels = c(1, 2, 3, 4, 5, 6, 7),
-        labels = c("Lunes", "Martes", "Miercoles", "Jueves", "Viernes", "Sabado", "Domingo")
-      )
-  )
-
 

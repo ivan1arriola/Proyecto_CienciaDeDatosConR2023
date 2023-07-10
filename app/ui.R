@@ -36,7 +36,7 @@ body <- dashboardBody(
         tabItem(
             tabName = "multivariado",
             fluidRow(
-                plotOutput('multi')
+                multivariado_ui("multivariado_module")
             )
         ),
 

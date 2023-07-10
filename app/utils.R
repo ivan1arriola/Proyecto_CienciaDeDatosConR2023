@@ -91,3 +91,26 @@ load_data <- function(filename, con, query) {
   }
   return(data)
 }
+
+
+data_folder_app <- "data"
+obtener_registros_max <- function(nombre_archivo, conexion, consulta) {
+  registros_max_file <- paste0(data_folder_app, "/", nombre_archivo)
+  if (file.exists(registros_max_file)) {
+    registros_max <- readr::read_csv(registros_max_file)
+  } else {
+    registros_max <- DBI::dbGetQuery(conexion, consulta)
+    readr::write_csv(registros_max, registros_max_file)
+  }
+  
+  registros_max <- registros_max %>% 
+    dplyr::mutate( 
+      dia_de_la_semana = factor(
+        day_of_week,
+        levels = c(1, 2, 3, 4, 5, 6, 7),
+        labels = c("Lunes", "Martes", "Miercoles", "Jueves", "Viernes", "Sabado", "Domingo")
+      )
+    )
+  
+  return(registros_max)
+}

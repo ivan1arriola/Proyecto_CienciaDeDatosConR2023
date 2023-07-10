@@ -15,13 +15,8 @@ univariado_ui <- function(id) {
       selectInput(
         ns("boxplot_hora"),
         "Seleccione un rango de horas",
-        c(
-          "00:00 - 06:00",
-          "06:01 - 12:00",
-          "12:01 - 18:00",
-          "18:01 - 23:59"
-        ),
-        selected = "00:00 - 06:00"
+        intervalos,
+        selected = "00:00"
       ),
       plotOutput(ns("boxplot"))
     ),
@@ -55,7 +50,7 @@ univariado_server  <- function(input, output, session) {
     ggplot(registros_filtrados) +
       geom_boxplot(aes(x = barrio, y = max_velocidad)) +
       labs(
-        title = "Boxplot de velocidad máxima por barrio",
+        title = "Boxplot de velocidad máxima",
         x = "Barrio",
         y = "Velocidad máxima"
       ) +
@@ -63,5 +58,3 @@ univariado_server  <- function(input, output, session) {
   })
   
 }
-
-print("Tabla.R Loaded")

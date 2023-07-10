@@ -10,7 +10,23 @@ transformarCoord <- function(lat, lon, mvd_map) {
 }
 print("transformarCoord loaded")
 
-
+encontrar_barrio <- function(lat, lon, mvd_map) {
+  # Convertir las coordenadas geográficas a un objeto espacial sf
+  puntos_transformados <- transformarCoord(lat, lon, mvd_map)
+  
+  # Encontrar el barrio que contiene el punto
+  ls_contains <- sf::st_contains(mvd_map$the_geom,
+                                 puntos_transformados$geometry)
+  indice_barrio <- which(as.logical(ls_contains))[1]
+  matching_barrios <- mvd_map[indice_barrio, ]
+  
+  # Obtener el nombre del barrio
+  barrio <- matching_barrios$nombbarr
+  
+  # Retornar el nombre del barrio
+  return(barrio)
+}
+print("encontrar_barrio loaded")
 
 # Definir una función personalizada para colorear polígonos
 nacol <- function(spdf) {
@@ -59,25 +75,15 @@ if (!dir.exists(data_folder)) {
   dir.create(data_folder)
 }
 
-
-data_folder_app <- "data"
-obtener_registros_max <- function(nombre_archivo, conexion, consulta) {
-  registros_max_file <- paste0(data_folder_app, "/", nombre_archivo)
-  if (file.exists(registros_max_file)) {
-    registros_max <- readr::read_csv(registros_max_file)
+# Función para cargar datos desde archivos CSV o desde la base de datos
+load_data <- function(filename, con, query) {
+  if (file.exists(paste0(data_folder,"/", filename))) {
+    data <- read.csv(file.path(data_folder, filename))
   } else {
-    registros_max <- DBI::dbGetQuery(conexion, consulta)
-    readr::write_csv(registros_max, registros_max_file)
+    data <- DBI::dbGetQuery(con, query)
+    write.csv(data, file.path(data_folder, filename), row.names = FALSE)
   }
-  
-  registros_max <- registros_max %>% 
-    dplyr::mutate( 
-      dia_de_la_semana = factor(
-        day_of_week,
-        levels = c(1, 2, 3, 4, 5, 6, 7),
-        labels = c("Lunes", "Martes", "Miercoles", "Jueves", "Viernes", "Sabado", "Domingo")
-      )
-    )
-  
-  return(registros_max)
+  return(data)
 }
+
+

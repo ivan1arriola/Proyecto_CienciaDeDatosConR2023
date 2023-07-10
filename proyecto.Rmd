@@ -25,7 +25,7 @@ library(spdep)
 library(xtable)
 library(rpart)
 library(rpart.plot)
-source(here::here("app", "utils.R"))
+source(here::here("utils.R"))
 library(randomForest)
 library(modelr)
 ```

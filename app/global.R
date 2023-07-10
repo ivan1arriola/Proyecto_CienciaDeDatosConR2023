@@ -17,10 +17,10 @@ library(sf)
 
 # Cargar modulos ----------------------------------------------------------
 
-source(paste0(moduleDir, "/Mapa.R"))
-source(paste0(moduleDir, "/Univariado.R"))
-source(paste0(moduleDir, "/Multivariado.R"))
-source("utils.R")
+#source(paste0(moduleDir, "/Mapa.R"))
+#source(paste0(moduleDir, "/Univariado.R"))
+#source(paste0(moduleDir, "/Multivariado.R"))
+#source("utils.R")
 
 
 # Variables globales ------------------------------------------------------

@@ -5,6 +5,8 @@ print("global.R")
 dataDir <- "data"
 moduleDir <- "modules"
 
+d_sensores <- NULL
+
 # Paquetes ----------------------------------------------------------------
 library(magrittr)
 library(shiny)
@@ -15,13 +17,7 @@ library(dplyr)
 library(ggplot2)
 library(sf)
 
-# Cargar modulos ----------------------------------------------------------
-
-#source(paste0(moduleDir, "/Mapa.R"))
-#source(paste0(moduleDir, "/Univariado.R"))
-#source(paste0(moduleDir, "/Multivariado.R"))
-#source("utils.R")
-
+source("utils.R")
 
 # Variables globales ------------------------------------------------------
 
@@ -85,16 +81,17 @@ con <- DBI::dbConnect(
 
 
 ### Datos de los sensores
-sensores_file <- paste0(dataDir, "/sensores.csv")
-if (file.exists(sensores_file)) {
-  d_sensores <- readr::read_csv(sensores_file)
-} else {
-  d_sensores <- DBI::dbGetQuery(
-    con,
-    "SELECT * FROM d_sensores"
-  )
-  readr::write_csv(d_sensores, sensores_file)
-}
+
+d_sensores <- obtener_registros_max2(
+  "d_sensores.csv",
+  con,
+  "
+  SELECT
+    *
+  FROM
+    d_sensores
+  "
+)
 
 puntos_sensores <- d_sensores %>% 
   dplyr::select(barrio, latitud, longitud) %>%
@@ -151,13 +148,14 @@ registros_max_barrioxdiaxhora <- obtener_registros_max(registros_max_file, con,
 
 
 ### registros maximos por rango hora, dia de la semana y sensor
-registros_max_sensor_file <-"/registros_max_sensor_file.csv"
+registros_max_sensor_file <-"/registros__max_sensor__file.csv"
 registros_max_barrioxdiaxhora_sensor <- obtener_registros_max(registros_max_sensor_file,
     con,
     "
       SELECT
-        d_sensores.barrio,
         d_date.day_of_week,
+        d_sensores.latitud,
+        d_sensores.longitud,
         CASE
             WHEN fct_registros.id_hora >= 0 AND fct_registros.id_hora < 100 THEN '00:00'
             WHEN fct_registros.id_hora >= 100 AND fct_registros.id_hora < 200 THEN '01:00'
@@ -188,16 +186,15 @@ registros_max_barrioxdiaxhora_sensor <- obtener_registros_max(registros_max_sens
         MAX(fct_registros.velocidad) AS max_velocidad,
         MAX(fct_registros.volume) AS max_volumen,
         AVG(fct_registros.velocidad) AS promedio_velocidad,
-        AVG(fct_registros.volume) AS promedio_volumen,
-        COUNT(fct_registros.velocidad) AS cant_registros
+        AVG(fct_registros.volume) AS promedio_volumen
     FROM fct_registros
     INNER JOIN d_sensores ON fct_registros.id_detector = d_sensores.id_detector
     LEFT JOIN d_date ON fct_registros.id_fecha = d_date.id_fecha
-    GROUP BY d_sensores.barrio, d_date.day_of_week, hora_rango, d_sensores.id_detector
+    GROUP BY d_date.day_of_week, hora_rango, d_sensores.id_detector
     "
   )
 
-  velocidad_volumen <- obtener_registros_max('velocidad_volumen.csv',
+  velocidad_volumen <- obtener_registros_max2('velocidad_volumen.csv',
   con,
   "
   SELECT
@@ -210,13 +207,14 @@ registros_max_barrioxdiaxhora_sensor <- obtener_registros_max(registros_max_sens
   "
 )
 
-velocidad_calles <- obtener_registros_max( "velocidad_sensores.csv",
+velocidad_calles <- obtener_registros_max2( "velocidad_sensores.csv",
   con,
   "
   SELECT
     d_sensores.latitud,
     d_sensores.longitud,
-    AVG(fct_registros.velocidad) AS promedio_velocidad,
+    AVG(fct_registros.velocidad) AS promedio_velocidad
+
 FROM fct_registros
 INNER JOIN d_sensores ON fct_registros.id_detector = d_sensores.id_detector
 GROUP BY
@@ -225,3 +223,10 @@ GROUP BY
 
   "
   )
+
+
+# Cargar modulos ----------------------------------------------------------
+
+source(paste0(moduleDir, "/Mapa.R"))
+source(paste0(moduleDir, "/Univariado.R"))
+

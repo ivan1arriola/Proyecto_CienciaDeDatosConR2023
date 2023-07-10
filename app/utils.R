@@ -81,3 +81,14 @@ obtener_registros_max <- function(nombre_archivo, conexion, consulta) {
   
   return(registros_max)
 }
+
+obtener_registros_max2 <- function(nombre_archivo, conexion, consulta) {
+  registros_max_file <- paste0(data_folder_app, "/", nombre_archivo)
+  if (file.exists(registros_max_file)) {
+    registros_max <- readr::read_csv(registros_max_file)
+  } else {
+    registros_max <- DBI::dbGetQuery(conexion, consulta)
+    readr::write_csv(registros_max, registros_max_file)
+  }
+  return(registros_max)
+}

@@ -8,7 +8,6 @@ sidebar <- dashboardSidebar(
     sidebarMenu(
         menuItem("Mapa", tabName = "mapa", icon = icon("map")),
         menuItem("Univariado", tabName = "univariado", icon = icon("chart-bar")),
-        menuItem("Multivariado", tabName = "multivariado", icon = icon("chart-pie")),
         menuItem("Modelo", tabName = "modelos", icon = icon("chart-line"))
         
     )
@@ -30,13 +29,6 @@ body <- dashboardBody(
             tabName = "univariado",
             fluidRow(
                 univariado_ui("univariado_module"),
-            )
-        ),
-        
-        tabItem(
-            tabName = "multivariado",
-            fluidRow(
-                multivariado_ui("multivariado_module")
             )
         ),
 

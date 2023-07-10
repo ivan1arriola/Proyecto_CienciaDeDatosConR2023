@@ -942,7 +942,10 @@ max_velocidad_hora_barrio %>%
 En Parque Rodo hay valores altos durante la noche, que lo diferencia del resto de los barrios.
 
 
-#### Variacion por dia de la semana
+
+
+
+#### Variacion del volumen por dia de la semana
 
 
 
@@ -968,7 +971,8 @@ promedios_semanales %>% ggplot() +
     y = "Promedio"
   ) 
 ```
-
+Se puede notar un volumen claramente más alto los días de semana, yendo en aumento de lunes a viernes, hasta bajar el promedio los fines de semana. 
+El día de la semana con más volumen de tránsito es el viernes, y el de menor volumen es el domingo.
 
 
 ```{r, echo = FALSE, fig.cap="Densidad de Volumen"}
@@ -988,27 +992,11 @@ tabla %>%
   ) +
   coord_cartesian(xlim = c(0, 100))
 ```
+Se puede notar un comportamiento casi idéntico en la cantidad de observaciones del volumen, según el día de la semana. La mayoría de los datos se concentra cuando el volumen está entre 0 y 10, la mayoría de los días. Los fines de semana (En especial el domingo) se puede observar un comportamiento distinto, ya que cuando el volumen está entre 0 y 10, la cantidad de observaciónes es mucho mayor, y no hay tanta concentración de datos cuando el volumen aumenta.
 
 
 
-
-#### Variacion por mes del año
-
-
-#### Variacion por año
-
-
-
-
-
-
-### Velocidad
-Ahora observemos como va variando velocidad
-
-
-#### Variacion por hora del dia
-
-#### Variacion por dia de la semana
+#### Variacion de la velocidad por dia de la semana
 
 ```{r }
 promedios_semanales %>% ggplot() +
@@ -1031,6 +1019,7 @@ promedios_semanales %>% ggplot() +
     y = "Promedio"
   ) 
 ```
+Podemos observar que el promedio de velocidad es casi el mismo para cada día de la semana, a excepción de los fines de semana, donde la velocidad aumenta levemente. Esto concuerda con la disminución del volumen los fines de semana, visto anteriormente.
 
 ```{r, echo = FALSE, fig.cap="Densidad de Velocidad"}
 tabla %>%
@@ -1047,6 +1036,7 @@ tabla %>%
     name= "Densidad"
   )
 ```
+La velocidad parece no variar a lo largo de los días de la semana. Alcanzan su valor máximo alrededor de los 35km/h.
 
 ```{r Grafico de distribucion max_velocidad por hora, echo = FALSE}
 mediana <- registros_maximos_hora %>% 
@@ -1087,7 +1077,7 @@ registros_maximos_hora %>%
 
 ```
 Entre las 00:00 y las 08:00 es donde se alcanzan picos de casi 140 km/h, luego de ese rango se reduce la tendencia por ser horario laboral para luego crecer a medida de que cae la noche.
-Durante el fin de semana las velocidades máximas durante el horario laboral de lunes a viernes es totalmente diferente, los conductores durante el fin de semana aprovechan la baja de volumen para circular mas rápido.
+Durante el fin de semana las velocidades máximas durante el horario laboral de lunes a viernes es totalmente diferente, los conductores durante el fin de semana aprovechan la baja de volumen para circular mas rápido. También se observa un comportamiento distinto los fines de semana, ya que hay muchos más casos atípicos de valores inferiores; esto puede ser causado por la sensación de relax que suele haber en los fines de semana, por no ser días laborables.
 
 
 
@@ -1117,10 +1107,12 @@ registros_maximos_hora %>%
   
 
 ```
+Este gráfico nos revela cosas interesantes, ya que podemos notar que los fines de semana, los máximos de velocidad registrados son mayores que los días de semana. De manera contraria, los máximos de velocidad con valores bajos son más comunes los días de semana.
+Esto también está muy relacionado a lo visto anteriormente sobre el volumen, ya que los fines de semana el volumen es menor, y eso permite facilidad a alcanzar picos de velocidad mayores. Como los días de semana el volumen de tráfico es mayor, es esperable que los máximos de velocidad no escalen demasiado.
+
+Luego, con respecto a los meses, se puede ver que los dos meses en los cuales la densidad de la velocidad máxima es más similar los días de semana y los fines de semana son enero y febrero, y esto puede ser causado por las vacaciones de verano.
 
 
-
-#### Variacion por mes del año
 
 
 #### Variacion por año
@@ -1153,34 +1145,31 @@ registros_maximos_hora %>%
   
 ```
 
-Ahora la densidad de velocidad durante los dias siempre se encuentran en un rango de (0,60]
+En 2021 y 2022, los días de semana hubo una densidad de velócidad máxima muy similar, aunque los fines de semana hubo mayor densidad en valores altos de velocidad en 2021.
+En 2023 podemos ver una densidad mayor los días de semana, con menos diferencia de los días de semana como los años anteriores. 
+Cabe aclarar que los datos de 2023 solo abarcan hasta mayo. Esto puede dar una explicación de la diferencia menor entre fin de semana y día de semana, ya que anteriormente vimos que los primeros meses del año muestran un comportamiento similar.
+
+
 
 
 ### Variacion conjunta de velocidad y volumen
 
-
-
-
-
-
-En el gráfico se puede observar: - La velocidad media se mantiene casi constante durante toda la semana, salvo una leve variación positiva los fines de semana. - El volumen medio de vehículos detectados por los radares va variando en la semana, alcanzado su pico los viernes. También es considerablemente inferior los fines de semana.
-
-
-Si bien previamente obsevamos leves exceos de velocidad, dentro de esos excesos se registran velocidades maximas de mas de 100km/h, veamos esos maximos pro franja horaria segun si fue registrado en un fin de semana o no
-
-
-
-
-
-
-
-
-
-
-Con el volumen de trafico, hay una gran diferencia el domingo comparado con el resto de los dias, en todos los dias la mayoria de volumen se concentra en el rango (0,10] donde en dicho rango alcanza su pico de circulacion en todo Montevideo.
-
-
-
+```{r}
+registros_maximos_hora %>% 
+  ggplot(
+  aes(
+    x= max_velocidad,
+    y = promedio_volumen
+  )
+)  + 
+  geom_point(
+    aes(
+      color = hora_rango
+    )
+  )
+```
+Se observa una relación negativa, ya que cuanto mayor es el volumen, menor es el máximo de velocidad, y cuando el volumen es menor, los picos de velocidad tienden a ser mucho mayores.
+Además, podemos ver que los momentos de mayor volumen de tráfico suelen darse a la tarde, entre las 16:00 y las 18:00. También, los momentos donde el volumen es menor, y los picos de velocidad mayores suelen darse en la madrugada, entre las 2:00 y las 4:00
 
 
 
@@ -1320,20 +1309,13 @@ varImpPlot(rf_avg_velocidad)
 ```
 Este grafico muestra que variables son mas significativas para la prediccion del promedio de velocidad
 
-## Predicciones
-
-[Presentar las predicciones realizadas por el modelo.]
-
-## Interpretación de resultados
-
-[Interpretar los resultados obtenidos del modelo estadístico.]
 
 # Aplicación Shiny
 
 ## Descripción
 
-La aplicación consta de 4 partes. Un mapa con la ubicación de los semáforos, un analisis univariado, otro multivariado y el modelo.
-La palicacion resume todo lo hecho anteriormente.
+La aplicación consta de 4 partes. Un mapa con la ubicación de los sensores, un analisis univariado y otro multivariado.
+La aplicación resume todo lo hecho anteriormente.
 [Enlace](https://ivan1arriola.shinyapps.io/tareaFinal/)
 
 

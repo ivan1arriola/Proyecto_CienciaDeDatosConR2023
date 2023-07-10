@@ -1278,8 +1278,7 @@ El modelo se aleja alrededor de esa cantidad de kilometros de los datos reales. 
 
 
 ```{r Datos Random Forest}
-forest_data <- load_data("forest_data.csv",
-  con,
+forest_data <- dbGetQuery(con,
   "
   SELECT
     AVG(fct_registros.volume) as avg_volumen,
@@ -1287,7 +1286,7 @@ forest_data <- load_data("forest_data.csv",
     MAX(fct_registros.volume) as max_volumen,
     fct_registros.id_carril,
     fct_registros.id_hora
-FROM fct_registros 
+FROM fct_registros TABLESAMPLE SYSTEM (0.1)
 LEFT JOIN d_date ON fct_registros.id_fecha = d_date.id_fecha
 GROUP BY
     fct_registros.id_detector,

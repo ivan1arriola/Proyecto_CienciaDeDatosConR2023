@@ -197,3 +197,31 @@ registros_max_barrioxdiaxhora_sensor <- obtener_registros_max(registros_max_sens
     "
   )
 
+  velocidad_volumen <- obtener_registros_max('velocidad_volumen.csv',
+  con,
+  "
+  SELECT
+    fct_registros.velocidad,
+    fct_registros.volume AS volumen
+  FROM
+    fct_registros TABLESAMPLE SYSTEM (1)
+  WHERE
+    fct_registros.velocidad > 0
+  "
+)
+
+velocidad_calles <- obtener_registros_max( "velocidad_sensores.csv",
+  con,
+  "
+  SELECT
+    d_sensores.latitud,
+    d_sensores.longitud,
+    AVG(fct_registros.velocidad) AS promedio_velocidad,
+FROM fct_registros
+INNER JOIN d_sensores ON fct_registros.id_detector = d_sensores.id_detector
+GROUP BY
+    d_sensores.latitud,
+    d_sensores.longitud;
+
+  "
+  )

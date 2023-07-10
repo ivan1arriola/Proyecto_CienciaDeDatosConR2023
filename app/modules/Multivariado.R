@@ -1,9 +1,11 @@
 multivariado_ui <- function(id) {
   ns <- NS(id)
-  lista_barrios <- d_sensores %>% 
-    dplyr::select(barrio) %>%
-    dplyr::distinct() %>%
-    dplyr::pull()
+  lista_barrios <- d_sensores %>%
+    select(barrio) %>%
+    distinct() %>%
+    arrange(barrio) %>%
+    pull()
+
 
 
   fluidRow(
@@ -34,7 +36,7 @@ multivariado_ui <- function(id) {
     ),
 
     box(
-      title = "Grafico de barras",
+      title = "Grafico de barras de volumen promedio por rango horario",
       status = "primary",
       solidHeader = TRUE,
       width = 8,
@@ -51,8 +53,8 @@ multivariado_server  <- function(input, output, session) {
   v <- reactiveValues(data = NULL)
 
   max_avg_volumen <- registros_max_barrioxdiaxhora %>%
-    dplyr::select(promedio_volumen) %>%
-    dplyr::pull() %>%
+    select(promedio_volumen) %>%
+    pull() %>%
     max()
   
   observeEvent(input$barrio, {

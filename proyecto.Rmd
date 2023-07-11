@@ -3,7 +3,7 @@ title: "Proyecto final"
 author: "Iván Arriola, Federico Miquelerena, Damián Rovetta"
 date: "12-07-2023"
 output: pdf_document
-bibliography: [packages.bib, bibliografia.bib]
+bibliography: [bibliografia.bib, packages.bib]
 nocite: "@*"
 header-includes:
   - \usepackage{float}
@@ -22,7 +22,6 @@ library(sf)
 library(paletteer)
 library(geouy)
 library(spdep)
-library(xtable)
 library(rpart)
 library(rpart.plot)
 source(here::here("utils.R"))
@@ -457,7 +456,7 @@ cant_datos_por_barrio_area <- cant_datos_por_ubicacion %>%
   arrange(desc(cant_datos_por_area))
 ```
 
-```{r Cantidad de datos por ubicacion ponderado por area 2, fig.cap = 'Cantidad de datos por ubicacion ponderado por area'}
+```{r Grafico Cantidad de datos por ubicacion ponderado por area, echo = FALSE, fig.cap = 'Cantidad de datos por ubicacion ponderado por area'}
 cant_datos_por_barrio_area %>%
   ggplot(aes(x = fct_reorder(barrio, cant_datos_por_area), y = cant_datos_por_area, fill = barrio)) +
   geom_bar(stat = "identity", position = "stack") +
@@ -599,15 +598,18 @@ velocidad_volumen %>% ggplot() +
 ```
 
 Se puede observar que la mayoria de los valores son menores a 100, en particular
-el 75% de los datos son menores a `r round(resumen_volumen$cuartil_3, 2)` vehiculos.
+el 75% de los datos son menores a `r round(resumen_volumen$cuartil_3, 2)` vehículos.
 
 
 # Preguntas de Investigacion
 
-Las preguntas que dirigiran este analisis son las siguientes:
-1.  ¿Existe alguna correlación entre el volumen y la velocidad?
-2.  ¿Cuáles son las calles con los mayores promedios de velocidad en Montevideo? ¿Con que frecuencia se cometen excesos de velocidad?
-3. ¿Cómo va variando el volumen y velocidad medidos a través del TIEMPO?
+Las preguntas que dirigirán este análisis son las siguientes:
+
+1. ¿Existe alguna correlación entre el volumen y la velocidad?.
+
+2.  ¿Cuáles son las calles con los mayores promedios de velocidad en Montevideo? ¿Con que frecuencia se cometen excesos de velocidad?.
+
+3. ¿Cómo va variando el volumen y velocidad medidos a través del TIEMPO?.
 
 
 ## 1. ¿Existe alguna correlación entre el volumen y la velocidad?
@@ -693,8 +695,6 @@ velocidad_calles %>%
 El siguiente gráfico nos muestra que las 3 calles con mas velocidad en promedio superan el máximo de 45km/h siendo este la velocidad máxima de circulación reglamentaria. La avenida más rápida en promedio no alcanza el máximo de velocidad perimitido
 
 En promedio de velocidad circulacion los conductores son prudentes, aun asi vemos con que frecuencia se comenten excesos de velocidad.
-
-
 ```{r Importar datos de exceso de velocidad, echo=FALSE }
 excesos <- load_data( "excesos.csv",
   con,
@@ -715,9 +715,7 @@ excesos <- load_data( "excesos.csv",
                                        "Garzon"), 60, 45)
   )
 ```
-
-
-```{r Grafico de , fig.cap = "Es netamente nula la proporcion de excesos de velocidad, podemos decir el los conductores en general respetan los limites de velocidad"}
+```{r Grafico, fig.cap = "Propocion de excesos de velocidad por calle"}
 excesos %>% 
   filter(velocidad > limite) %>% 
   group_by(dsc_avenida) %>%  
@@ -745,6 +743,8 @@ excesos %>%
        y = "Calle") +
   theme_bw()
 ```
+Si bien es una proporción de valor bajo tengamos en cuenta que estamos tomando el 1% de mas de 85 millones de registros, es decir que hay mas de 850 mil infracciones de velocidad solo en Avenida Rivera, en Avenida Italia hay mucha mas diferencia superando el millón cuatrocientos en casi 2 años y medio.
+
 
 ## 3. ¿Cómo va variando el volumen y velocidad medidos a traves de el tiempo?
 
@@ -950,10 +950,9 @@ En Parque Rodo hay valores altos durante la noche, que lo diferencia del resto d
 
 #### Variacion del volumen por dia de la semana
 
-
-
-
-```{r }
+Se puede notar un volumen claramente más alto los días de semana, yendo en aumento de lunes a viernes, hasta bajar el promedio los fines de semana. 
+El día de la semana con más volumen de tránsito es el viernes, y el de menor volumen es el domingo.
+```{r}
 promedios_semanales %>% ggplot() +
   geom_col(
     aes(
@@ -974,10 +973,9 @@ promedios_semanales %>% ggplot() +
     y = "Promedio"
   ) 
 ```
-Se puede notar un volumen claramente más alto los días de semana, yendo en aumento de lunes a viernes, hasta bajar el promedio los fines de semana. 
-El día de la semana con más volumen de tránsito es el viernes, y el de menor volumen es el domingo.
 
 
+Se puede notar un comportamiento casi idéntico en la cantidad de observaciones del volumen, según el día de la semana. La mayoría de los datos se concentra cuando el volumen está entre 0 y 10, la mayoría de los días. Los fines de semana (En especial el domingo) se puede observar un comportamiento distinto, ya que cuando el volumen está entre 0 y 10, la cantidad de observaciónes es mucho mayor, y no hay tanta concentración de datos cuando el volumen aumenta.
 ```{r, echo = FALSE, fig.cap="Densidad de Volumen"}
 tabla %>%
   ggplot() + 
@@ -995,13 +993,14 @@ tabla %>%
   ) +
   coord_cartesian(xlim = c(0, 100))
 ```
-Se puede notar un comportamiento casi idéntico en la cantidad de observaciones del volumen, según el día de la semana. La mayoría de los datos se concentra cuando el volumen está entre 0 y 10, la mayoría de los días. Los fines de semana (En especial el domingo) se puede observar un comportamiento distinto, ya que cuando el volumen está entre 0 y 10, la cantidad de observaciónes es mucho mayor, y no hay tanta concentración de datos cuando el volumen aumenta.
+
 
 
 
 #### Variacion de la velocidad por dia de la semana
 
-```{r }
+Podemos observar que el promedio de velocidad es casi el mismo para cada día de la semana, a excepción de los fines de semana, donde la velocidad aumenta levemente. Esto concuerda con la disminución del volumen los fines de semana, visto anteriormente.
+```{r}
 promedios_semanales %>% ggplot() +
   geom_col(
     aes(
@@ -1022,8 +1021,10 @@ promedios_semanales %>% ggplot() +
     y = "Promedio"
   ) 
 ```
-Podemos observar que el promedio de velocidad es casi el mismo para cada día de la semana, a excepción de los fines de semana, donde la velocidad aumenta levemente. Esto concuerda con la disminución del volumen los fines de semana, visto anteriormente.
 
+
+
+Viendo la densidad de la velocidad parece no variar a lo largo de los días de la semana. Alcanzan su valor máximo alrededor de los 35km/h.
 ```{r, echo = FALSE, fig.cap="Densidad de Velocidad"}
 tabla %>%
   ggplot() + 
@@ -1039,9 +1040,10 @@ tabla %>%
     name= "Densidad"
   )
 ```
-La velocidad parece no variar a lo largo de los días de la semana. Alcanzan su valor máximo alrededor de los 35km/h.
 
-```{r Grafico de distribucion max_velocidad por hora, echo = FALSE}
+
+Dentro de los días de la semana hemos observado diferentes comportamientos de la velocidad durante los días sábado y domingo (fin de semana), en particular observemos las velocidades máximas registradas de lunes a viernes y durante el fin de semana.
+```{r Grafico de distribucion max_velocidad por hora, echo = FALSE, fig.cap='Distribucion maxima velocidad por hora'}
 mediana <- registros_maximos_hora %>% 
   summarise(mediana = median(max_velocidad))
 mediana <- as.numeric(mediana)
@@ -1077,14 +1079,13 @@ registros_maximos_hora %>%
   scale_y_discrete(
     name= "Hora del día"
   )
-
 ```
-Entre las 00:00 y las 08:00 es donde se alcanzan picos de casi 140 km/h, luego de ese rango se reduce la tendencia por ser horario laboral para luego crecer a medida de que cae la noche.
-Durante el fin de semana las velocidades máximas durante el horario laboral de lunes a viernes es totalmente diferente, los conductores durante el fin de semana aprovechan la baja de volumen para circular mas rápido. También se observa un comportamiento distinto los fines de semana, ya que hay muchos más casos atípicos de valores inferiores; esto puede ser causado por la sensación de relax que suele haber en los fines de semana, por no ser días laborables.
 
 
 
-```{r Densidades de max_velocidad x mes del año}
+Este gráfico nos revela cosas interesantes, ya que podemos notar que los fines de semana, los máximos de velocidad registrados son mayores que los días de semana. De manera contraria, los máximos de velocidad con valores bajos son más comunes los días de semana.
+Esto también está muy relacionado a lo visto anteriormente sobre el volumen, ya que los fines de semana el volumen es menor, y eso permite facilidad a alcanzar picos de velocidad mayores. Como los días de semana el volumen de tráfico es mayor, es esperable que los máximos de velocidad no escalen demasiado.
+```{r Densidades de max_velocidad x mes del año, fig.cap='Densidad de la velocidad por meses'}
 registros_maximos_hora %>%
   ggplot(
     aes(
@@ -1108,20 +1109,15 @@ registros_maximos_hora %>%
     labels = c("Entre semana", "Fin de semana")
   )
   
-
 ```
-Este gráfico nos revela cosas interesantes, ya que podemos notar que los fines de semana, los máximos de velocidad registrados son mayores que los días de semana. De manera contraria, los máximos de velocidad con valores bajos son más comunes los días de semana.
-Esto también está muy relacionado a lo visto anteriormente sobre el volumen, ya que los fines de semana el volumen es menor, y eso permite facilidad a alcanzar picos de velocidad mayores. Como los días de semana el volumen de tráfico es mayor, es esperable que los máximos de velocidad no escalen demasiado.
-
 Luego, con respecto a los meses, se puede ver que los dos meses en los cuales la densidad de la velocidad máxima es más similar los días de semana y los fines de semana son enero y febrero, y esto puede ser causado por las vacaciones de verano.
 
 
 
 
 #### Variacion por año
-
-Si entramos en cada año vemos como crece la densidad de velocidad máxima registrada de lunes a viernes, 
-```{r, echo = FALSE, fig.cap = '2023 no esta completo, vamos a profundizar mas en nuestro modelo predictivo'}
+Si entramos en cada año vemos como crece la densidad de velocidad máxima registrada de lunes a viernes. 
+```{r, echo = FALSE, fig.cap = '2023 no esta completo'}
 registros_maximos_hora %>%
   ggplot(
     aes(
@@ -1156,7 +1152,26 @@ Cabe aclarar que los datos de 2023 solo abarcan hasta mayo. Esto puede dar una e
 
 
 ### Variacion conjunta de velocidad y volumen
+```{r}
+registros_maximos_hora %>% 
+  ggplot(
+  aes(
+    x= max_velocidad,
+    y = promedio_volumen
+  )
+)  + 
+  geom_point(
+    color = "purple"
+  ) + 
+  theme(legend.position = "none")
+  facet_wrap(~hora_rango)
+```
 
+
+
+Se observa una relación negativa, ya que cuanto mayor es el volumen, menor es el máximo de velocidad, y cuando el volumen es menor, los picos de velocidad tienden a ser mucho mayores.
+
+Además, si separamos por hora del día podemos ver que los momentos de mayor volumen de tráfico suelen darse a la tarde, entre las 16:00 y las 18:00. También, los momentos donde el volumen es menor, y los picos de velocidad mayores suelen darse en la madrugada, entre las 2:00 y las 4:00 como muestra el siguiente gráfico.
 ```{r}
 registros_maximos_hora %>% 
   ggplot(
@@ -1169,16 +1184,19 @@ registros_maximos_hora %>%
     aes(
       color = hora_rango
     )
-  )
+  ) + 
+  theme(legend.position = "none") + 
+  facet_wrap(~hora_rango)
 ```
-Se observa una relación negativa, ya que cuanto mayor es el volumen, menor es el máximo de velocidad, y cuando el volumen es menor, los picos de velocidad tienden a ser mucho mayores.
-Además, podemos ver que los momentos de mayor volumen de tráfico suelen darse a la tarde, entre las 16:00 y las 18:00. También, los momentos donde el volumen es menor, y los picos de velocidad mayores suelen darse en la madrugada, entre las 2:00 y las 4:00
+
 
 
 
 ## Resultados interesantes
 
-[Presentar los resultados más relevantes obtenidos durante el análisis exploratorio.]
+Hemos visto en general un promedio de velocidad constante a lo largo de los con mayor volumen de trafico durante los fines de semana casi debajo de los limites establecidos. No obstante existen registros de alta velocidad en masa con mayor frecuencia en la madrugada siendo registros que se toman en las zonas urbanas de Montevideo lo cual es llamativo
+
+Hemos visto una ciudad con un volumen promedio de 17, si lo vemos barrio por barrio notaremos un volumen promedio entre 30 y 40 autos entre las 7 y las 18hs y muy poca circulación en la madrugada excepto el barrio Parque Rodo teniendo incluso mayor volumen de 0 a 4hs que el resto de las horas.
 
 
 # Modelo estadístico
@@ -1255,9 +1273,6 @@ Los datos que tienen un volumen menor a 10.11, abarcan casi un tercio de los dat
 
 Una observación interesante es la diferencia de comportamiento entre los datos del día y de noche según el volumen. En todos los casos la velocidad es considerablemente mayor de noche que de día, pero la cantidad de datos observados es mayor de noche si el volumen es menor a 10, pero es mayor de día si el volumen es mayor a 10. Es decir, cuando el volumen es menor, hay más observaciones de noche, pero cuando hay mucho volumen de tráfico, hay menos observaciones de noche y de día hay muchas más. 
 
-
-
-
 Para saber la fiabilidad del modelo, calculamos el error cuadrado medio, y en base a eso fuimos ajustando los parámetros del modelo hasta llegar al actual, ya que es el que menor error tiene.
 ```{r Arbol testing}
 rmse(arbol_vol, training)
@@ -1266,72 +1281,9 @@ rmse(arbol_vol, testing)
 El modelo se aleja alrededor de esa cantidad de kilometros de los datos reales. Hay un mayor error en el conjunto de prueba, ya que son menos valores.
 
 
-## Random Forest
-
-
-```{r Datos Random Forest}
-forest_data <- dbGetQuery(con,
-  "
-  SELECT
-    AVG(fct_registros.volume) as avg_volumen,
-    AVG(fct_registros.velocidad) as avg_velocidad,
-    MAX(fct_registros.volume) as max_volumen,
-    fct_registros.id_carril,
-    fct_registros.id_hora
-FROM fct_registros TABLESAMPLE SYSTEM (0.1)
-LEFT JOIN d_date ON fct_registros.id_fecha = d_date.id_fecha
-GROUP BY
-    fct_registros.id_detector,
-    fct_registros.id_carril,
-    fct_registros.id_hora
-  "
-)
-
-nrow(forest_data)
-```
-
-
-```{r Random Forest training, eval=FALSE}
-intrain <- sample(x = 1:nrow(forest_data), size = nrow(forest_data)*0.7)
-
-training <- forest_data[intrain,]
-testing <- forest_data[-intrain,]
-
-rf_avg_velocidad <- randomForest(avg_velocidad~ .,data= training)
-```
-
-
-```{r Random Forest testing, eval=FALSE}
-#raiz cuadrada del error cuadratico medio
-rmse(rf_avg_velocidad, testing)
-```
-El modelo le erra por esa cantidad de kilometros/hora en promedio
-
-```{r Random Forest Plot, eval=FALSE}
-varImpPlot(rf_avg_velocidad)
-```
-Este grafico muestra que variables son mas significativas para la prediccion del promedio de velocidad
-
-
 # Aplicación Shiny
 
-## Descripción
-
-La aplicación consta de 4 partes. Un mapa con la ubicación de los sensores, un analisis univariado y otro multivariado.
-La aplicación resume todo lo hecho anteriormente.
-[Enlace](https://ivan1arriola.shinyapps.io/tareaFinal/)
-
-
-# Comentarios finales
-
-## Hallazgos principales
-
-[Resumir los principales hallazgos del proyecto.]
-
-## Posibles extensiones
-
-[Discutir posibles extensiones o mejoras para el proyecto.]
-
+**[Enlace](https://ivan1arriola.shinyapps.io/tareaFinal/)**
 
 # Referencias
 

@@ -6,9 +6,7 @@ header <- dashboardHeader(
 
 sidebar <- dashboardSidebar(
     sidebarMenu(
-        menuItem("Mapa", tabName = "mapa", icon = icon("map")),
-        menuItem("Univariado", tabName = "univariado", icon = icon("chart-bar")),
-        menuItem("Modelo", tabName = "modelos", icon = icon("chart-line"))
+        menuItem("Mapa", tabName = "mapa", icon = icon("map"))
         
     )
 )

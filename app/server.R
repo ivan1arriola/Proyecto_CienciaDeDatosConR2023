@@ -1,16 +1,182 @@
+
+cargarMapaVacio <- function(input, output, session) {
+  output$map <- renderLeaflet({
+    leaflet() %>%
+      addTiles() %>%
+      setView(
+        lng = (-56.43151 + -56.02365) / 2,
+        lat = (-34.93811 + -34.70182) / 2,
+        zoom = 12
+      )
+  })
+}
+
+ocultarSensores <- function(input, output, session){
+    leafletProxy("map") %>%
+      clearGroup(group = "Sensores")
+}
+
+ocultarBarrios <- function(input, output, session){
+    leafletProxy("map") %>%
+      clearGroup(group = "Barrios")
+}
+
+#### SERVIDOR ####
 server <- function(input, output, session) {
+  #Datos por barrio
 
-  moduleServer(
-    id = "mapa_module",
-    module = mapa_server,
-    valor_barrio = reactive(input$valor_barrio),
-    valor_sensor = reactive(input$valor_sensor),
-  )
+datos <- reactiveValues(
+  datos = NULL,
+  nombre_variable = NULL,
+  maximo = NULL,
+  mapa = NULL
+)
 
-  moduleServer(
-    id = "univariado_module",
-    module = univariado_server
+observeEvent(c(input$variable, input$barrioSeleccionado, input$dia_de_la_semana, input$hora), {
+    
+    print("Actualizando datos")
+    
+  lookup <- list(
+    vol = list(nombre_variable = "Volumen Promedio", columna_datos = "promedio_volumen"),
+    vel = list(nombre_variable = "Velocidad Promedio", columna_datos = "promedio_velocidad"),
+    vel_max = list(nombre_variable = "Velocidad máxima", columna_datos = "max_velocidad"),
+    vol_max = list(nombre_variable = "Volumen máximo", columna_datos = "max_volumen")
   )
   
-  output$multi <- renderPlot({})
+  if (input$variable %in% names(lookup)) {
+    datos$datos <- registros_max_barrioxdiaxhora %>%
+      select(barrio, dia_de_la_semana, hora_rango, !!sym(lookup[[input$variable]]$columna_datos)) %>%
+      mutate(
+        variable = !!sym(lookup[[input$variable]]$columna_datos),
+        hora_rango = as.character(hora_rango) %>% substr(1, 5)
+      ) %>% 
+      filter(barrio == input$barrioSeleccionado & dia_de_la_semana == input$dia_de_la_semana)
+    
+    datos$nombre_variable <- lookup[[input$variable]]$nombre_variable
+    
+    datos$maximo <- registros_max_barrioxdiaxhora %>%
+      select(!!sym(lookup[[input$variable]]$columna_datos)) %>%
+      pull() %>%
+      max()
+
+
+    datos$mapa <- registros_max_barrioxdiaxhora %>%
+    mutate(
+        variable = !!sym(lookup[[input$variable]]$columna_datos),
+        hora_rango = as.character(hora_rango) %>% substr(1, 5)
+      ) %>% 
+      select(barrio, dia_de_la_semana, hora_rango, !!sym(lookup[[input$variable]]$columna_datos), variable) %>%
+      filter(hora_rango == intervalos[input$hora +1] & dia_de_la_semana == input$dia_de_la_semana) %>% 
+      inner_join(mvd_map_fixed, by = c("barrio" = "nombbarr"))
+
+    print(head(datos$mapa))
+  }    
+})
+
+
+
+  #------------------------------------------------------
+  # Mapa
+
+cargarMapaVacio(input, output, session)
+mostrar <- reactiveValues( 
+    sensores = FALSE,
+    barrios = FALSE
+)
+
+observe({
+    mostrar$sensores <- "sensor" %in% input$aMostrar
+    mostrar$barrios <- "barrio" %in% input$aMostrar
+})
+
+observeEvent( mostrar$sensores, {
+  if (mostrar$sensores) {
+    print ("Mostrando sensores")
+    mostrarSensores(input, output, session)
+  }
+  else {
+    print ("Ocultando sensores")
+    ocultarSensores(input, output, session)
+  }
+})
+
+observeEvent( c(mostrar$barrio , input$variable, input$barrioSeleccionado, input$dia_de_la_semana, input$hora), {
+  if (mostrar$barrios) {
+    print ("Mostrando barrios")
+    req(datos$mapa)
+
+    pal <- colorNumeric(
+      palette = "Blues",
+      domain = datos$mapa$variable
+    )
+    
+    leafletProxy("map") %>%
+      clearGroup(group = "Barrios") %>%
+      addPolygons(
+        data = st_as_sf(datos$mapa),
+        group = "Barrios",
+        fillColor = ~pal(variable),
+        fillOpacity = 0.5,
+        weight = 1,
+        color = "black",
+        label = ~barrio,
+        labelOptions = labelOptions(
+          style = list("font-weight" = "normal", padding = "3px 8px"),
+          textsize = "15px",
+          direction = "auto"
+        )
+      )
+  }
+  else {
+    print ("Ocultando barrios")
+    ocultarBarrios(input, output, session)
+  }
+})
+
+
+   
+#------------------------------------------------------
+# Grafico
+
+
+
+
+  
+output$barras <- renderPlot({
+    
+    print("Generando grafico")
+    req(datos$datos)
+    datos$datos %>% ggplot( aes(x = hora_rango, y = variable)) +
+      geom_col(
+        aes(
+          fill = variable
+        )
+      ) +
+      scale_x_discrete(
+        name = "Hora",
+        labels = intervalos
+      )+
+      scale_y_continuous(
+        name = datos$nombre_variable,
+        limits = c(0, datos$maximo)
+      ) +
+      geom_text(
+        aes(
+          label = round(variable, 2)
+        ), 
+        vjust = -0.5
+      ) +
+      theme_bw() +
+      theme(
+        legend.position = "none"
+      )
+    
+})
+
+
 }
+
+
+
+
+

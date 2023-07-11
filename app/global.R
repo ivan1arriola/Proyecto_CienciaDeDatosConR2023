@@ -1,4 +1,4 @@
-print("global.R")
+print("Loading global.R")
 
 # Directorios -------------------------------------------------------------
 
@@ -21,55 +21,16 @@ source("utils.R")
 # Variables globales ------------------------------------------------------
 
 intervalos <- c(
-  '00:00',
-  '01:00',
-  '02:00',
-  '03:00',
-  '04:00',
-  '05:00',
-  '06:00',
-  '07:00',
-  '08:00',
-  '09:00',
-  '10:00',
-  '11:00',
-  '12:00',
-  '13:00',
-  '14:00',
-  '15:00',
-  '16:00',
-  '17:00',
-  '18:00',
-  '19:00',
-  '20:00',
-  '21:00',
-  '22:00',
-  '23:00'
+  '00:00', '01:00', '02:00', '03:00', '04:00', '05:00',
+  '06:00', '07:00', '08:00', '09:00', '10:00', '11:00',
+  '12:00', '13:00', '14:00', '15:00', '16:00', '17:00',
+  '18:00', '19:00', '20:00', '21:00', '22:00', '23:00'
 )
 
-# Cargar Datos ------------------------------------------------------------
-
-### Cargar Mapa
-map_file <- paste0(dataDir, "/Barrios.shp")
-if (file.exists(map_file)) {
-  mvd_map <- sf::st_read(map_file)
-} else {
-  mvd_map <- geouy::load_geouy("Barrios")
-  sf::st_write(mvd_map, map_file) 
-}
-
-mvd_map <- geouy::load_geouy("Barrios")
-mvd_map_fixed <- sf::st_make_valid(sf::st_transform(mvd_map, crs = 4326))
-
-#### colores del mapa
-colores <- leaflet::colorFactor(
-  palette = "Set1", 
-  domain = nacol(sf::st_make_valid(sf::st_transform(mvd_map, crs = 4326)))
-)
-
-
+# Cargar datos ------------------------------------------------------------
 
 ### Coneccion a la Base de datos
+print("Connecting to database")
 con <- DBI::dbConnect(
   RPostgres::Postgres(),
   host = Sys.getenv("DB_HOST"),
@@ -79,9 +40,16 @@ con <- DBI::dbConnect(
   dbname = Sys.getenv("DB_NAME")
 )
 
+## Cargar Mapa de Montevideo
+mvd_map_fixed <- geouy::load_geouy("Barrios") %>% st_transform(crs = 4326) %>% st_make_valid()
+print(names(mvd_map_fixed) %>% paste(collapse = ", "))
 
+getColorsMVD <- colorFactor(
+  palette = "Set1", 
+  domain = nacol(sf::st_make_valid(sf::st_transform(mvd_map_fixed, crs = 4326)))
+)
 
-### Datos de los sensores
+## Cargar datos de sensores
 
 d_sensores <- obtener_registros_max2(
   "d_sensores.csv",
@@ -96,10 +64,11 @@ d_sensores <- obtener_registros_max2(
 
 puntos_sensores <- d_sensores %>% 
   dplyr::select(barrio, latitud, longitud) %>%
-  dplyr::mutate(transformarCoord(latitud, longitud, mvd_map))
+  dplyr::mutate(transformarCoord(latitud, longitud, mvd_map_fixed))
 
 
-### registros maximos por rango hora, dia de la semana y barrio
+## Registros de sensores
+
 registros_max_file <-  "registros_max_barrio_file.csv"
 
 registros_max_barrioxdiaxhora <- obtener_registros_max(registros_max_file, con,
@@ -227,7 +196,10 @@ GROUP BY
 
 
 # Cargar modulos ----------------------------------------------------------
+lista_barrios <- d_sensores %>%
+    select(barrio) %>%
+    distinct() %>%
+    arrange(barrio) %>%
+    pull()
 
-source(paste0(moduleDir, "/Mapa.R"))
-source(paste0(moduleDir, "/Univariado.R"))
-
+print("global.R loaded")

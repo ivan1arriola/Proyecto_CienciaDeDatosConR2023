@@ -1,3 +1,4 @@
+print ("Loading utils.R")
 
 transformarCoord <- function(lat, lon, mvd_map) {
   puntos_lat_lng <- data.frame(lng = lon, lat = lat)
@@ -8,7 +9,6 @@ transformarCoord <- function(lat, lon, mvd_map) {
                                            crs = sf::st_crs(mvd_map))
   return(puntos_transformados)
 }
-print("transformarCoord loaded")
 
 
 
@@ -37,7 +37,6 @@ nacol <- function(spdf) {
   }
   return(cols)
 }
-print("nacol loaded")
 
 
 intToHour <- function(int) {
@@ -49,20 +48,20 @@ intToHour <- function(int) {
   
   return(hora_nueva)
 }
-print("intToHour loaded")
 
 
-# Directorio de la carpeta "data"
-data_folder <- here::here("data")
 
-if (!dir.exists(data_folder)) {
-  dir.create(data_folder)
+
+
+
+# Funciones para obtener datos ----------------------------------------------
+if (!dir.exists(dataDir)) {
+  dir.create(dataDir)
 }
 
 
-data_folder_app <- "data"
 obtener_registros_max <- function(nombre_archivo, conexion, consulta) {
-  registros_max_file <- paste0(data_folder_app, "/", nombre_archivo)
+  registros_max_file <- paste0(dataDir, "/", nombre_archivo)
   if (file.exists(registros_max_file)) {
     registros_max <- readr::read_csv(registros_max_file)
   } else {
@@ -75,7 +74,7 @@ obtener_registros_max <- function(nombre_archivo, conexion, consulta) {
       dia_de_la_semana = factor(
         day_of_week,
         levels = c(1, 2, 3, 4, 5, 6, 7),
-        labels = c("Lunes", "Martes", "Miercoles", "Jueves", "Viernes", "Sabado", "Domingo")
+        labels = c("Lunes", "Martes", "Miércoles", "Jueves", "Viernes", "Sábado", "Domingo")
       )
     )
   
@@ -83,7 +82,7 @@ obtener_registros_max <- function(nombre_archivo, conexion, consulta) {
 }
 
 obtener_registros_max2 <- function(nombre_archivo, conexion, consulta) {
-  registros_max_file <- paste0(data_folder_app, "/", nombre_archivo)
+  registros_max_file <- paste0(dataDir, "/", nombre_archivo)
   if (file.exists(registros_max_file)) {
     registros_max <- readr::read_csv(registros_max_file)
   } else {
@@ -92,3 +91,5 @@ obtener_registros_max2 <- function(nombre_archivo, conexion, consulta) {
   }
   return(registros_max)
 }
+
+

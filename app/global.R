@@ -5,7 +5,6 @@ print("global.R")
 dataDir <- "data"
 moduleDir <- "modules"
 
-d_sensores <- NULL
 
 # Paquetes ----------------------------------------------------------------
 library(magrittr)
@@ -58,6 +57,8 @@ if (file.exists(map_file)) {
   mvd_map <- geouy::load_geouy("Barrios")
   sf::st_write(mvd_map, map_file) 
 }
+
+mvd_map <- geouy::load_geouy("Barrios")
 mvd_map_fixed <- sf::st_make_valid(sf::st_transform(mvd_map, crs = 4326))
 
 #### colores del mapa

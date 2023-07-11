@@ -8,8 +8,24 @@ sidebar <- dashboardSidebar(
     sidebarMenu(
         menuItem("Mapa", tabName = "mapa", icon = icon("map")),
         menuItem("Univariado", tabName = "univariado", icon = icon("chart-bar")),
-        menuItem("Modelo", tabName = "modelos", icon = icon("chart-line"))
-        
+        menuItem("Modelo", tabName = "modelos", icon = icon("chart-line")),
+        box(
+            title = "Controles Mapa",
+            status = "info",
+            collapsible = TRUE,
+            width = NULL,
+            solidHeader = TRUE,
+            checkboxInput(
+            inputId = "valor_barrio",
+            label = "Barrios",
+            value = FALSE
+            ),
+            checkboxInput(
+            inputId = "valor_sensor",
+            label = "Sensores",
+            value = FALSE
+            ),
+        )
     )
 )
 

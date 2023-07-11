@@ -356,7 +356,7 @@ Para mostrarlo, hemos decidido utilizar un mapa de Montevideo con los barrios y 
 En el mapa se puede ver que los sensores estan ubicados en 42 de los 62 barrios de Montevideo.
 Los barrios que tienen sensores son 42 sobre 62 siendo los barrios de Buceo, Centro, Pocitos y Unión con mas de 20 sensores.
 
-```{r Cantidad de sensores por barrio, echo = FALSE, fig.cap = 'Mapa de Montevideo con cantidad de sensores por barrio.'}
+```{r Cantidad de sensores por barrio, fig.cap = 'Mapa de Montevideo con cantidad de sensores por barrio.'}
 cant_sensores <- d_sensores %>%
   group_by(barrio) %>%
   summarise(
@@ -402,14 +402,17 @@ cant_datos_por_ubicacion <- load_data("cant_datos_por_ubicacion.csv",
 )
 ```
 
-```{r Grafico  Cantidad de datos por ubicacion, echo = FALSE, fig.cap = 'Cantidad de datos por ubicacion'}
+```{r Cantidad de datos por ubicacion 2, fig.cap = 'Cantidad de datos por ubicacion'}
 cant_datos_por_barrio <- cant_datos_por_ubicacion %>%
   group_by(barrio) %>%
   summarise(
     cant_datos = sum(cant_datos)
   ) %>%
   arrange(desc(cant_datos))
+```
 
+
+```{r Cantidad de datos por ubicacion 3, fig.cap = 'Cantidad de datos por ubicacion'}
 cant_datos_por_barrio %>%
   ggplot(aes(x = fct_reorder(barrio, cant_datos), y = cant_datos, fill = barrio)) +
   geom_bar(stat = "identity", position = "stack") +
@@ -439,7 +442,7 @@ mvd_map_con_area <- mvd_map_fixed %>%
 
 ```
 
-```{r Cantidad de datos por ubicacion ponderado por area, echo = FALSE}
+```{r Cantidad de datos por ubicacion ponderado por area}
 cant_datos_por_barrio_area <- cant_datos_por_ubicacion %>%
   group_by(barrio) %>%
   summarise(
@@ -454,7 +457,7 @@ cant_datos_por_barrio_area <- cant_datos_por_ubicacion %>%
   arrange(desc(cant_datos_por_area))
 ```
 
-```{r Grafico  Cantidad de datos por ubicacion ponderado por area, echo = FALSE, fig.cap = 'Cantidad de datos por ubicacion ponderado por area'}
+```{r Cantidad de datos por ubicacion ponderado por area 2, fig.cap = 'Cantidad de datos por ubicacion ponderado por area'}
 cant_datos_por_barrio_area %>%
   ggplot(aes(x = fct_reorder(barrio, cant_datos_por_area), y = cant_datos_por_area, fill = barrio)) +
   geom_bar(stat = "identity", position = "stack") +

@@ -1,7 +1,16 @@
 server <- function(input, output, session) {
-  
-  callModule(mapa_server, "mapa_module")
-  callModule(univariado_server, "univariado_module")
+
+  moduleServer(
+    id = "mapa_module",
+    module = mapa_server,
+    valor_barrio = reactive(input$valor_barrio),
+    valor_sensor = reactive(input$valor_sensor),
+  )
+
+  moduleServer(
+    id = "univariado_module",
+    module = univariado_server
+  )
   
   output$multi <- renderPlot({})
 }

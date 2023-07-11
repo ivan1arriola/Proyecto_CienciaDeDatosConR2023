@@ -30,25 +30,7 @@ plot <- function(ns) {
     )
 }
 
-checkboxes <- function(ns) {
-  box(
-    title = "Controles Mapa",
-    status = "info",
-    collapsible = TRUE,
-    width = NULL,
-    solidHeader = TRUE,
-    checkboxInput(
-      inputId = ns("valor_barrio"),
-      label = "Barrios",
-      value = FALSE
-    ),
-    checkboxInput(
-      inputId = ns("valor_sensor"),
-      label = "Sensores",
-      value = FALSE
-    ),
-  )
-}
+
 
 opciones <- function(ns) {
   box(
@@ -90,7 +72,7 @@ opciones <- function(ns) {
     radioButtons(
       ns("variable"),
       "Seleccione una variable",
-      choices = c("Volumen" = "vol", "Velocidad" = "vel"),
+      choices = c("Volumen" = "vol", "Velocidad" = "vel", "Velocidad Maxima" = "vel_max"),
       selected = "vol"
     ),
   )
@@ -109,7 +91,6 @@ mapa_ui <- function(id) {
       column(
         width = 4,
         h1("Controles"),
-        checkboxes(ns),
         opciones(ns)
 
         
@@ -163,17 +144,13 @@ generar_mapa <- function(dia_semana, rango_hora) {
         data = data,
         lng = ~longitud,
         lat = ~latitud,
-        weight = 5,
-        radius = ~promedio_volumen/2,
-        opacity = 0.5,
-        fill = TRUE,
+        radius = 6, stroke = FALSE, 
+        fill = TRUE, fillOpacity = 1,
         fillColor = fillColor,
-        popup = NULL,
-        popupOptions = NULL,
         group = "Sensores"
       )
   }
-mapa_server <- function(input, output, session) {
+mapa_server <- function(input, output, session, valor_barrio, valor_sensor) {
   
 
   output$map <- renderLeaflet({
@@ -188,7 +165,14 @@ mapa_server <- function(input, output, session) {
 
 
   observe({
-    if (input$valor_sensor) {
+    print(valor_barrio)
+    print(input$dia_de_la_semana)
+    print(input$hora)
+    print(input$variable)
+    print(valor_sensor)
+
+
+    if (valor_sensor) {
       dia_semana <- input$dia_de_la_semana
       rango_hora <- intervalos[input$hora + 1]      
       variable <- input$variable
@@ -200,7 +184,7 @@ mapa_server <- function(input, output, session) {
           left_join(d_sensores, by = c(latitud = "latitud", longitud = "longitud"))
 
         fillColor <- ~ colorNumeric(
-          palette = "Reds",
+          palette = "viridis",
           domain = registros_filtrados$max_volumen 
         )(max_volumen)
 
@@ -213,7 +197,17 @@ mapa_server <- function(input, output, session) {
           left_join(d_sensores, by = c(latitud = "latitud", longitud = "longitud"))
 
         fillColor <- ~ colorNumeric(
-          palette = "Reds",
+          palette = "viridis",
+          domain = registros_filtrados$max_velocidad 
+        )(max_velocidad)
+        addMarkersToMap(registros_filtrados, fillColor)
+      } else if (variable == "vel_max"){
+        registros_filtrados <- registros_max_barrioxdiaxhora_sensor %>%
+          filter(dia_de_la_semana == dia_semana & hora_rango == strptime(rango_hora, format = "%H:%M"))%>% 
+          left_join(d_sensores, by = c(latitud = "latitud", longitud = "longitud"))
+
+        fillColor <- ~ colorNumeric(
+          palette = "viridis",
           domain = registros_filtrados$max_velocidad 
         )(max_velocidad)
         addMarkersToMap(registros_filtrados, fillColor)
@@ -229,7 +223,7 @@ mapa_server <- function(input, output, session) {
   })
 
   observe({
-    if (input$valor_barrio) {
+    if (valor_barrio) {
       dia_semana <- input$dia_de_la_semana
       rango_hora <- intervalos[input$hora + 1]      
       print ( paste ( "dia_semana: ", dia_semana, " rango_hora: ", rango_hora, " variable: ", input$variable ) )
@@ -237,7 +231,7 @@ mapa_server <- function(input, output, session) {
       map_mvd_max <- st_as_sf(map_mvd_max)
       if (input$variable == "vol") {
         fillColor <- ~ colorNumeric(
-          palette = "Reds",
+          palette = "viridis",
           domain = map_mvd_max$max_volumen 
         )(max_volumen)
         addPolygonsToMap(map_mvd_max, fillColor)
@@ -314,4 +308,3 @@ mapa_server <- function(input, output, session) {
 }
 
 
-print("Mapa.R Loaded")

@@ -1,25 +1,4 @@
 
-cargarMapaVacio <- function(input, output, session) {
-  output$map <- renderLeaflet({
-    leaflet() %>%
-      addTiles() %>%
-      setView(
-        lng = (-56.43151 + -56.02365) / 2,
-        lat = (-34.93811 + -34.70182) / 2,
-        zoom = 12
-      )
-  })
-}
-
-ocultarSensores <- function(input, output, session){
-    leafletProxy("map") %>%
-      clearGroup(group = "Sensores")
-}
-
-ocultarBarrios <- function(input, output, session){
-    leafletProxy("map") %>%
-      clearGroup(group = "Barrios")
-}
 
 #### SERVIDOR ####
 server <- function(input, output, session) {
@@ -32,17 +11,15 @@ datos <- reactiveValues(
   mapa = NULL
 )
 
-observeEvent(c(input$variable, input$barrioSeleccionado, input$dia_de_la_semana, input$hora), {
-    
-    print("Actualizando datos")
-    
-  lookup <- list(
+lookup <- list(
     vol = list(nombre_variable = "Volumen Promedio", columna_datos = "promedio_volumen"),
     vel = list(nombre_variable = "Velocidad Promedio", columna_datos = "promedio_velocidad"),
     vel_max = list(nombre_variable = "Velocidad máxima", columna_datos = "max_velocidad"),
     vol_max = list(nombre_variable = "Volumen máximo", columna_datos = "max_volumen")
-  )
-  
+)
+
+observeEvent(c(input$variable, input$barrioSeleccionado, input$dia_de_la_semana), {
+  ## Datos para el gráfico
   if (input$variable %in% names(lookup)) {
     datos$datos <- registros_max_barrioxdiaxhora %>%
       select(barrio, dia_de_la_semana, hora_rango, !!sym(lookup[[input$variable]]$columna_datos)) %>%
@@ -58,8 +35,12 @@ observeEvent(c(input$variable, input$barrioSeleccionado, input$dia_de_la_semana,
       select(!!sym(lookup[[input$variable]]$columna_datos)) %>%
       pull() %>%
       max()
+  }
+})
 
-
+observeEvent(c(input$variable, input$dia_de_la_semana, input$hora), {
+    ## Datos para el mapa
+    if (input$variable %in% names(lookup)) {
     datos$mapa <- registros_max_barrioxdiaxhora %>%
     mutate(
         variable = !!sym(lookup[[input$variable]]$columna_datos),
@@ -78,7 +59,16 @@ observeEvent(c(input$variable, input$barrioSeleccionado, input$dia_de_la_semana,
   #------------------------------------------------------
   # Mapa
 
-cargarMapaVacio(input, output, session)
+output$map <- renderLeaflet({
+    leaflet() %>%
+      addTiles() %>%
+      setView(
+        lng = (-56.43151 + -56.02365) / 2,
+        lat = (-34.93811 + -34.70182) / 2,
+        zoom = 12
+      )
+})
+  
 mostrar <- reactiveValues( 
     sensores = FALSE,
     barrios = FALSE
@@ -92,15 +82,13 @@ observe({
 observeEvent( mostrar$sensores, {
   if (mostrar$sensores) {
     print ("Mostrando sensores")
-    mostrarSensores(input, output, session)
   }
   else {
     print ("Ocultando sensores")
-    ocultarSensores(input, output, session)
   }
 })
 
-observeEvent( c(mostrar$barrio , input$variable, input$barrioSeleccionado, input$dia_de_la_semana, input$hora), {
+observeEvent( c(mostrar$barrios , input$variable, input$barrioSeleccionado, input$dia_de_la_semana, input$hora), {
   if (mostrar$barrios) {
     print ("Mostrando barrios")
     req(datos$mapa)
@@ -129,7 +117,8 @@ observeEvent( c(mostrar$barrio , input$variable, input$barrioSeleccionado, input
   }
   else {
     print ("Ocultando barrios")
-    ocultarBarrios(input, output, session)
+    leafletProxy("map") %>%
+      clearGroup(group = "Barrios")
   }
 })
 

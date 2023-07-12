@@ -109,7 +109,7 @@ con <- DBI::dbConnect(
 )
 ```
 
-![Diagrama de la base de datos](app/media/fct_registros.png "Diagrama de la base de datos"){width="300" height="600"}
+![Diagrama de la base de datos](img/fct_registros.png "Diagrama de la base de datos"){width="300" height="600"}
 
 Nuestra tabla principal será `fct_registros`.
 

@@ -238,7 +238,7 @@ FROM
     fct_registros
 ") 
 ```
-Se descubrio que la cantidad de datos que tienen los tres campos en 0 es `r datos_0[1,1]` registros, lo que representa
+Se descubrió que la cantidad de datos que tienen los tres campos en 0 es `r datos_0[1,1]` registros, lo que representa
 el `r round(datos_0[1,1] / tabla_datos_null[1,4] * 100, 6)`% de los datos nulos.
 
 ```{r, echo = FALSE}
@@ -481,7 +481,7 @@ Las variables que se van a analizar son las siguientes: - `volume`: _Numérico_.
 
 Resumen de la variable velocidad
 
-```{r Resumen de la variable velocidad, echo = FALSE}
+```{r Resumen de la variable velocidad, echo = FALSE, results = 'asis'}
 (
     resumen_velocidad <- load_data("resumen_velocidad.csv",
     con,
@@ -1284,6 +1284,11 @@ El modelo se aleja alrededor de esa cantidad de kilometros de los datos reales. 
 # Aplicación Shiny
 
 **[Enlace](https://ivan1arriola.shinyapps.io/tareaFinal/)**
+
+# Comentarios finales
+
+En promedio Montevideo es una ciudad con velocidad promedio de casi 31 km/h, no podemos dejar pasar por alto la cantidad de excesos de velocidad a valores muy elevados que durante el fin de semana se producen mas.
+Con ese valor de velocidad promedio y mirando tambien el volumen promedio de 17, podemos llegar a decir que Montevideo es una ciudad bastante lenta teniendo en consideración que las mediciones fueron hechas incluso en avenidas donde mas se circula, mucho mas en las famosas "hora pico" entre las 16 y 18hs
 
 # Referencias
 

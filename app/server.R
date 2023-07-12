@@ -8,7 +8,8 @@ datos <- reactiveValues(
   datos = NULL,
   nombre_variable = NULL,
   maximo = NULL,
-  mapa = NULL
+  mapa = NULL,
+  sensores = NULL
 )
 
 lookup <- list(
@@ -39,7 +40,7 @@ observeEvent(c(input$variable, input$barrioSeleccionado, input$dia_de_la_semana)
 })
 
 observeEvent(c(input$variable, input$dia_de_la_semana, input$hora), {
-    ## Datos para el mapa
+    ## Datos para el mapa / barrios
     if (input$variable %in% names(lookup)) {
     datos$mapa <- registros_max_barrioxdiaxhora %>%
     mutate(
@@ -51,7 +52,22 @@ observeEvent(c(input$variable, input$dia_de_la_semana, input$hora), {
       inner_join(mvd_map_fixed, by = c("barrio" = "nombbarr"))
 
     print(head(datos$mapa))
-  }    
+  } 
+
+  ## Datos para el mapa / sensores
+
+  if (input$variable %in% names(lookup)) {
+    datos$sensores <- registros_max_barrioxdiaxhora_sensor %>%
+    mutate(
+        variable = !!sym(lookup[[input$variable]]$columna_datos),
+        hora_rango = as.character(hora_rango) %>% substr(1, 5)
+      ) %>% 
+      select(latitud, longitud, dia_de_la_semana, hora_rango, variable) %>%
+      filter(hora_rango == intervalos[input$hora +1] & dia_de_la_semana == input$dia_de_la_semana) %>% 
+      inner_join(puntos_sensores, by = c("latitud" = "latitud", "longitud" = "longitud"))
+
+    print(head(datos$sensores))
+  }
 })
 
 
@@ -65,7 +81,7 @@ output$map <- renderLeaflet({
       setView(
         lng = (-56.43151 + -56.02365) / 2,
         lat = (-34.93811 + -34.70182) / 2,
-        zoom = 12
+        zoom = 13
       )
 })
   
@@ -79,12 +95,49 @@ observe({
     mostrar$barrios <- "barrio" %in% input$aMostrar
 })
 
-observeEvent( mostrar$sensores, {
+observeEvent( c(mostrar$sensores , input$variable, input$barrioSeleccionado, input$dia_de_la_semana, input$hora), {
   if (mostrar$sensores) {
     print ("Mostrando sensores")
+    req(datos$sensores)
+
+    pal <- colorNumeric(
+      palette = "Blues",
+      domain = registros_max_barrioxdiaxhora[[lookup[[input$variable]]$columna_datos]]
+    )
+    
+    leafletProxy("map") %>%
+      clearGroup(group = "Sensores") %>%
+      addCircleMarkers(
+        data = st_as_sf(datos$sensores),
+        lat = ~latitud,
+        lng = ~longitud,
+        group = "Sensores",
+        color = ~pal(variable),
+        fillOpacity = 0.8,
+        label = ~round(variable, 2),
+        labelOptions = labelOptions(
+          style = list("font-weight" = "normal", padding = "3px 8px"),
+          textsize = "15px",
+          direction = "auto"
+        )
+      )  %>% 
+      removeControl("legendSensores") %>%
+      addLegend(
+        pal = pal,
+        values = datos$sensores$variable,
+        title = "Valor",
+        position = "bottomright",
+        opacity = 1,
+        labFormat = labelFormat(suffix = " ", digits = 2),
+        layerId = "legendSensores"
+      )
+
   }
   else {
     print ("Ocultando sensores")
+    leafletProxy("map") %>%
+      clearGroup(group = "Sensores") %>% 
+      removeControl("legendSensores")
   }
 })
 
@@ -95,7 +148,7 @@ observeEvent( c(mostrar$barrios , input$variable, input$barrioSeleccionado, inpu
 
     pal <- colorNumeric(
       palette = "Blues",
-      domain = datos$mapa$variable
+      domain = registros_max_barrioxdiaxhora[[lookup[[input$variable]]$columna_datos]]
     )
     
     leafletProxy("map") %>%
@@ -113,12 +166,22 @@ observeEvent( c(mostrar$barrios , input$variable, input$barrioSeleccionado, inpu
           textsize = "15px",
           direction = "auto"
         )
+      ) %>%  
+      removeControl("legendBarrios") %>% 
+      addLegend(
+        pal = pal,
+        values = datos$mapa$variable,
+        title = datos$nombre_variable,
+        position = "bottomright",
+        group = "Barrios",
+        layerId = "legendBarrios"
       )
   }
   else {
     print ("Ocultando barrios")
     leafletProxy("map") %>%
-      clearGroup(group = "Barrios")
+      clearGroup(group = "Barrios") %>% 
+      removeControl("legendBarrios")
   }
 })
 

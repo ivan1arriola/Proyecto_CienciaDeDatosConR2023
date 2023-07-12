@@ -1,16 +1,13 @@
 mapa <- function() {
     leafletOutput(
       "map",
-      width = "100%",
-      height = "60vh"
+      width = "100%"
     )
 }
 
 grafico <- function() {
     plotOutput(
-      "barras",
-      width = "100%",
-      height = "60vh"
+      "barras"
     )
 }
 

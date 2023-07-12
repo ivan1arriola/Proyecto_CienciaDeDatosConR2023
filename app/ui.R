@@ -13,8 +13,6 @@ grafico <- function() {
 
 
 
-
-
 fluidPage(
   titlePanel("Datos de Trafico"),
   sidebarLayout(

@@ -50,6 +50,7 @@ Los datos utilizados en este proyecto fueron sacados de Catalogo de Datos Abiert
 Para el proyecto se utilizo una base de datos que contiene los tres dataset mencionados anteriormente.
 
 Se combinaron los datos del dataset dando origen a 3 tablas:
+
 ### Tabla: fct_registros
 
 - Cantidad de datos: 85386695.
@@ -76,18 +77,15 @@ Se combinaron los datos del dataset dando origen a 3 tablas:
   - `latitud`: _Numérico continuo_.
   - `longitud`: _Numérico continuo_. Junto a `latitud` nos indica las coordenadas geograficas del sensor.
   - `barrio`: _Texto_. Esta variable fue creada a partir del paquete `geouy`
+  
+Y una tercer tabla que contiene los datos de las fechas de los registros.  
 
 ## Base de datos para el proyecto
 
-
-Y una tercer tabla que contiene los datos de las fechas de los registros.
-
 ### Tabla: d_date
 
-Agunas de las variables de esta tabla son 
-
 - Cantidad de datos: 3652
-- Variables de la tabla:
+- Agunas de las variables de esta tabla son:
   - `id_fecha`: _Numérico_ (_Primary Key_)
   - `date_actual`: _Fecha_. Secuencia de fechas desde el 01-01-2021 con formato _YYYY-MM-DD_
   - `day_of_week`: _Numérico_. Dia de la semana que indica 1 como lunes, 2 como martes, etc.
@@ -106,7 +104,8 @@ Agunas de las variables de esta tabla son
 
 ## Datos faltantes y nulos
 
-```{r Cantidad de datos faltantes y nulos, echo = FALSE}
+```{r Cantidad de datos faltantes y nulos, echo = FALSE, results='asis'}
+options(xtable.comment = FALSE)
 # Cantidad de datos faltantes y nulos
 tabla_datos_null <- load_data('tabla_datos_null.csv',con,
 "
@@ -116,7 +115,7 @@ SELECT 'velocidad' AS atributo,
        SUM(CASE WHEN velocidad = 0 THEN 1 ELSE 0 END) AS cant_0
 FROM fct_registros
 UNION ALL
-SELECT 'volumem_hora' AS atributo,
+SELECT 'volumen_hora' AS atributo,
        COUNT(*) AS cant_total,
        SUM(CASE WHEN volumen_hora IS NULL THEN 1 ELSE 0 END) AS cant_null,
        SUM(CASE WHEN volumen_hora = 0 THEN 1 ELSE 0 END) AS cant_0
@@ -144,26 +143,13 @@ FROM fct_registros;
     porc_null = round(cant_null / cant_total * 100, 6),
     porc_0 = round(cant_0 / cant_total * 100, 6)
   )
-print(tabla_datos_null)
+print(xtable::xtable(tabla_datos_null))
 ```
 
 En `r tabla_datos_null[5,3]` datos se perdio la informacion de la ubicacion del sensor, por lo que no sabemos de que calle se trata.
-En el `r tabla_datos_null[1,6]`% de los datos se detecto velocidad 0 y en el mismo porcentaje se detecto volumen 0.
+En el `r round(tabla_datos_null[1,6], 2)`% de los datos se detecto velocidad 0 y en el mismo porcentaje se detecto volumen 0.
+Se descubrió que la cantidad de datos que tienen los campos de `velocidad` , `volume` y `volumen_hora` igual a 0 es `r tabla_datos_null[1,4]` registros, lo que representa el `r round(tabla_datos_null[1,6], 2)`% de los datos nulos.
 
-## Datos Faltantes o Nulos
-
-```{r, echo = FALSE}
-# Cantidad de datos que tienen los tres campos en 0
-datos_0 <- load_data('datos_0.csv',con,
-"
-SELECT
-    COUNT(CASE WHEN fct_registros.velocidad = 0 AND fct_registros.volume = 0 AND fct_registros.volumen_hora = 0 THEN 1 END) AS registros_cero
-FROM
-    fct_registros
-") 
-```
-Se descubrio que la cantidad de datos que tienen los tres campos en 0 es `r datos_0[1,1]` registros, lo que representa
-el `r round(datos_0[1,1] / tabla_datos_null[1,4] * 100, 6)`% de los datos nulos.
 
 ```{r, echo = FALSE}
 # Cantidad de datos que tienen los tres campos en 0 y no tienen id_detector
@@ -185,23 +171,21 @@ FROM
 ")
 ```
 
-De los `r datos_0[1,1]` registros que tienen los tres campos en 0, `r datos_0_null[1,1]` no tienen id_detector y `r datos_0_not_null[1,1]` si tienen id_detector.
+De aquellos `r tabla_datos_null[1,4]` registros de valor cero `r datos_0_null[1,1]` no tienen id_detector.
 
 No queda claro si los datos que tienen los tres campos en 0 son datos que representan que no paso ningun vehiculo por el sensor o si son datos que no se pudieron obtener.
   
 
 ## Datos Faltantes o Nulos
 
+Sobre los datos faltantes de la ubicación del sensor, son datos que no se pueden recuperar, por lo que se tendrán que descartar.
 
-Sobre los datos faltantes de la ubicacion del sensor, son datos que no se pueden recuperar, por lo que se tendran
-que descartar.
+Se quiso averiguar en que fecha se perdió la información de la ubicación del sensor, para ver si se podía recuperar la informacion de otra forma, pero no se pudo.
 
-Se quiso averiguar en que fecha se perdio la informacion de la ubicacion del sensor, para ver si se podia recuperar
-la informacion de otra forma, pero no se pudo.
-
-```{r, echo = FALSE}
+```{r, echo = FALSE, results='asis'}
+options(xtable.comment = FALSE)
 # Fecha en la que se perdio la informacion de la ubicacion del sensor
-load_data('fecha_null.csv',con,
+fecha_null <- load_data('fecha_null.csv',con,
 "
 SELECT id_fecha,
        COUNT(*) AS cant_total,
@@ -214,10 +198,12 @@ ORDER BY id_fecha;
   mutate(
     porc_null = round(cant_null / cant_total * 100, 6)
   )
+
+print(xtable::xtable(fecha_null))
 ```
 ## Datos Faltantes o Nulos
-
 ```{r, echo = FALSE}
+
 datos_null <- load_data('datos_null.csv',
   con,
   "SELECT *
@@ -230,19 +216,15 @@ datos_null$fecha <- as.Date(as.character(datos_null$id_fecha), format = "%Y%m%d"
 datos_null$hora <- datos_null$id_hora
 
 summary(datos_null)
-
 ```
 
-Se puede ver que los datos faltantes de la ubicacion del sensor van desde el 24/07/2021 hasta el 31/07/2021.
-Tambien se puede ver que todos los datos faltantes son del carril 2.
-Quiza se podrian recuperar los datos de la ubicacion del sensor revisando los datos originales pero es irrelevante
-ya que son pocos datos y no afectan al analisis.
 
+## Datos Faltantes o Nulos
 
-### Datos faltantes en la base de datos
-
-```{r Meses presentes en la base de datos}
-(
+Se puede ver que los datos faltantes de la ubicación del sensor van desde el 24/07/2021 hasta el 31/07/2021.
+Cambien se puede ver que todos los datos faltantes son del carril 2, quiza se podrían recuperar los datos de la ubicación del sensor revisando los datos originales pero es irrelevante
+ya que son pocos datos y no afectan al análisis.
+```{r Meses presentes en la base de datos, echo=FALSE}
   registros_año_mes <- load_data("registros_año_mes.csv",
     con,
     "
@@ -255,16 +237,13 @@ ya que son pocos datos y no afectan al analisis.
 
     "
   )
-)
 ```
-Haciendo una observación de los meses cubiertos por los datos, nos hemos dado cuenta que faltan algunos meses en la base de datos
+Teniendo en cuenta que los datos van desde enero 2021 a mayo 2023 (28 meses) nos hemos dado cuenta que faltan algunos meses en la base de datos, en particular `r 28-nrow(registros_año_mes)` meses
 
 
 ## Ubicacion de los sensores
-
 Los datos que tenemos son de 100 sensores ubicados todos en Montevideo y estos van cambiando de ubicacion cada mes.
 Por lo que el primer paso es ver cuantas ubicaciones distintas tenemos y cuantos sensores hay en cada ubicacion.
-
 ```{r Cargar mapas y sensores,  message=FALSE, results='hide'}
 d_sensores <- load_data("d_sensores.csv",
   con,
@@ -278,8 +257,6 @@ puntos_sensores <- d_sensores %>%
 ```
 
 ## Ubicacion de los sensores
-
-
 ```{r Cantidad de sensores por barrio, fig.cap = 'Mapa de Montevideo con cantidad de sensores por barrio.'}
 cant_sensores <- d_sensores %>%
   group_by(barrio) %>%
@@ -305,9 +282,8 @@ ggplot() +
 ```
 
 ## Ubicacion de los sensores
-Ahora quiero mostrar la cantidad de datos que tenemos por ubicacion, para ver si hay alguna ubicacion en particular que
-tenga mas o menos datos que las demas.
-
+Ahora quiero mostrar la cantidad de datos que tenemos por ubicación, para ver si hay alguna ubicación en particular que
+tenga mas o menos datos que las demás.
 ```{r Cantidad de datos por ubicacion, echo = FALSE}
 cant_datos_por_ubicacion <- load_data("cant_datos_por_ubicacion.csv",
   con,
@@ -326,7 +302,6 @@ cant_datos_por_ubicacion <- load_data("cant_datos_por_ubicacion.csv",
   cant_sensores, by = c("barrio" = "barrio")
 )
 ```
-
 ```{r Cantidad de datos por ubicacion 2, fig.cap = 'Cantidad de datos por ubicacion'}
 cant_datos_por_barrio <- cant_datos_por_ubicacion %>%
   group_by(barrio) %>%
@@ -335,8 +310,6 @@ cant_datos_por_barrio <- cant_datos_por_ubicacion %>%
   ) %>%
   arrange(desc(cant_datos))
 ```
-
-
 ```{r Cantidad de datos por ubicacion 3, fig.cap = 'Cantidad de datos por ubicacion'}
 cant_datos_por_barrio %>%
   ggplot(aes(x = fct_reorder(barrio, cant_datos), y = cant_datos, fill = barrio)) +
@@ -350,16 +323,13 @@ cant_datos_por_barrio %>%
 
 ```
 
-Se puede observar que la cantidad de datos por ubicacion no es para nada homogenea.
-Los barrios con mayor cantidad de datos aportados al dataset son Union, Pocitos, Tres Cruces, Buceo y Centro.
+## Ubicacion de los sensores
+Se puede observar que la cantidad de datos por ubicación no es para nada homogénea.
+Los barrios con mayor cantidad de datos aportados al dataset son Unión, Pocitos, Tres Cruces, Buceo y Centro.
 Por otro lado Maroñas, Carrasco, Las Canteras y Cerrito son los que menos datos aportan.
 
 ## Ubicacion de los sensores
-Ahora me interesaria saber cuales son los barrios mejores representados en el dataset, es decir, cuales son los barrios
-que tienen mas datos por metro cuadrado.
-
-primero calculo el area de cada barrio y luego calculo la cantidad de datos por metro cuadrado.
-
+Ahora me interesaría saber cuales son los barrios mejores representados en el dataset, es decir, cuales son los barrios que tienen mas datos por metro cuadrado. Primero calculo el area de cada barrio y luego calculo la cantidad de datos por metro cuadrado.
 ```{r Mapa Montevideo con Area, echo = FALSE}
 mvd_map_con_area <- mvd_map_fixed %>%
   mutate(
@@ -367,7 +337,6 @@ mvd_map_con_area <- mvd_map_fixed %>%
   ) %>% arrange(area)
 
 ```
-
 ```{r Cantidad de datos por ubicacion ponderado por area}
 cant_datos_por_barrio_area <- cant_datos_por_ubicacion %>%
   group_by(barrio) %>%
@@ -382,7 +351,6 @@ cant_datos_por_barrio_area <- cant_datos_por_ubicacion %>%
   ) %>%
   arrange(desc(cant_datos_por_area))
 ```
-
 ```{r Grafico Cantidad de datos por ubicacion ponderado por area, echo = FALSE, fig.cap = 'Cantidad de datos por ubicacion ponderado por area'}
 cant_datos_por_barrio_area %>%
   ggplot(aes(x = fct_reorder(barrio, cant_datos_por_area), y = cant_datos_por_area, fill = barrio)) +
@@ -391,53 +359,49 @@ cant_datos_por_barrio_area %>%
   scale_x_discrete(name = "Ubicacion") +
   scale_y_continuous(labels = scales::comma, name = "Cantidad de datos por metro cuadrado") +
   theme(
+    aspect.ratio = 0.5,
     legend.position = 'none'
   )
 
 ```
 
+## Ubicacion de los sensores
 Se puede observar que los barrios con mayor cantidad de datos por metro cuadrado son Pocitos,
 La Blanqueada, Jancito Vera, Centro y Tres Cruces.
 Por otro lado Maroñas, Carrasco, Las Canteras, Peñarol y Cerrito son los que menos datos aportan por metro cuadrado.
 
 ## Principales variables
+Las variables que se van a analizar son las siguientes:
 
-Las variables que se van a analizar son las siguientes: - `volume`: _Numérico_. Cantidad de vehiculos que pasaron en los últimos 5 minutos. - `volumen_hora`: _Numérico_. Cantidad de vehiculos que pasaron en la ultima hora. - `velocidad`: _Numérico_. Velocidad promedio de los vehiculos registrados en los utimos 5 minutos. Unidad en km/h
+- `volume`: _Numérico_. Cantidad de vehiculos que pasaron en los últimos 5 minutos.
+- `volumen_hora`: _Numérico_. Cantidad de vehiculos que pasaron en la ultima hora.
+- `velocidad`: _Numérico_. Velocidad promedio de los vehiculos registrados en los utimos 5 minutos. Unidad en km/h
 
-## Velocidad
-
+### Velocidad
 Resumen de la variable velocidad
-
-```{r Resumen de la variable velocidad, echo = FALSE}
-(
+```{r Resumen de la variable velocidad, echo = FALSE, results='asis'}
+options(xtable.comment = FALSE)
     resumen_velocidad <- load_data("resumen_velocidad.csv",
     con,
       "
         SELECT
           MIN(velocidad) AS minimo,
-          PERCENTILE_CONT(0.25) WITHIN GROUP (ORDER BY velocidad) AS primer_cuartil,
+          PERCENTILE_CONT(0.25) WITHIN GROUP (ORDER BY velocidad) AS 1err_cuartil,
           PERCENTILE_CONT(0.5) WITHIN GROUP (ORDER BY velocidad) AS mediana,
-          PERCENTILE_CONT(0.75) WITHIN GROUP (ORDER BY velocidad) AS tercer_cuartil,
-          MAX(velocidad) AS maximo,
-          AVG(velocidad) AS promedio,
+          PERCENTILE_CONT(0.75) WITHIN GROUP (ORDER BY velocidad) AS 3er_cuartil,
+          MAX(velocidad) AS max,
+          AVG(velocidad) AS prom,
           STDDEV(velocidad) AS desvio
         FROM fct_registros
       "
     )
-)
+print(xtable::xtable(resumen_velocidad))
 ```
-
-
-
-## Velocidad
-
-
-
 Ahora veamos la distribucion de la velocidad registrada
 Para mejor visualizacion, voy a dejar de lado los datos donde la velocidad es 0
 
 
-## Velocidad
+## Principales variables: Velocidad
 
 ```{r Datos de velocidad y Volumen, echo = FALSE}
   velocidad_volumen <- load_data('velocidad_volumen.csv',
@@ -453,7 +417,6 @@ Para mejor visualizacion, voy a dejar de lado los datos donde la velocidad es 0
   "
 )
 ```
-
 ```{r, Distribucion de velocidad Barras, fig.cap= "Distribucion de velocidad promedio"}
 velocidad_media <- mean(velocidad_volumen$velocidad)
 velocidad_desvio <- sd(velocidad_volumen$velocidad)
@@ -472,17 +435,16 @@ velocidad_volumen %>% ggplot() +
   geom_vline(xintercept = velocidad_media - velocidad_desvio, color = "black", linetype = "dashed", size = 1)
 ```
 
-Se puede observar que la distribucion de la velocidad es normal, con una media de 31.31 km/h y un desvio de 17.08 km/h.
+## Principales variables: Velocidad
+Se puede observar que la distribución de la velocidad es normal, con una media de 31.31 km/h y un desvio de 17.08 km/h.
 El 68% de los datos se encuentran entre 14.23 km/h y 48.39 km/h.
 
-## Volumen
+## Principales variables
 
+### Volumen
 Resumen de la variable volumen
-
-minimo, maximo, promedio, desvio, cuartiles
-
-```{r Resumen de la variable volumen, echo = FALSE}
-(
+```{r Resumen de la variable volumen, echo = FALSE, results='asis'}
+options(xtable.comment = FALSE)
     resumen_volumen <- load_data("resumen_volumen.csv",
     con,
       "
@@ -497,26 +459,18 @@ minimo, maximo, promedio, desvio, cuartiles
         FROM fct_registros
       "
     )
-)
+print(xtable::xtable(resumen_volumen))
 ```
+Se ve que la cantidad mínima de vehículos registrados en 5 minutos es 0 y la máxima es 659.
+El promedio de volumen es 17.28 vehículos y el desvio estándar es 19.18 vehículos.
+
+Ahora veamos la distribución del volumen registrado
+Para mejor visualización, vamos a dejar de lado los datos donde el volumen es 0. 
+Se podra observar que la mayoria de los valores son menores a 100, en particular
+el 75% de los datos son menores a `r round(resumen_volumen$cuartil_3, 2)` vehículos.
 
 
-
-
-Se ve que la cantidad minima de vehiculos registrados en 5 minutos es 0 y la maxima es 659.
-El promedio de volumen es 17.28 vehiculos y el desvio estandar es 19.18 vehiculos.
-
-
-## Volumen
-
-
-Ahora veamos la distribucion del volumen registrado
-Para mejor visualizacion, voy a dejar de lado los datos donde el volumen es 0
-
-
-## Volumen
-
-
+## Principales variables: Volumen
 ```{r, Distribucion de volumen Barras, fig.cap= "Distribucion de volumen"}
 volumen_media <- mean(velocidad_volumen$volumen)
 volumen_desvio <- sd(velocidad_volumen$volumen)
@@ -532,11 +486,11 @@ velocidad_volumen %>% ggplot() +
   geom_vline(xintercept = volumen_media, color = "black", linetype = "dashed", size = 1) +
   annotate("text", x = volumen_media + 5, y = 0.02, label = paste("Volumen promedio:", round(volumen_media, 2), "vehiculos"), size = 3) +
   geom_vline(xintercept = volumen_media + volumen_desvio, color = "black", linetype = "dashed", size = 1) +
-  geom_vline(xintercept = volumen_media - volumen_desvio, color = "black", linetype = "dashed", size = 1)
+  geom_vline(xintercept = volumen_media - volumen_desvio, color = "black", linetype = "dashed", size = 1) +
+  coord_cartesian(xlim = c(0, 150))
 ```
 
-Se puede observar que la mayoria de los valores son menores a 100, en particular
-el 75% de los datos son menores a `r round(resumen_volumen$cuartil_3, 2)` vehículos.
+
 
 ## Preguntas de Investigacion
 
@@ -549,12 +503,10 @@ Las preguntas que dirigirán este análisis son las siguientes:
 3. ¿Cómo va variando el volumen y velocidad medidos a través del TIEMPO?.
 
 
-## 1. ¿Existe alguna correlación entre el volumen y la velocidad?
+## ¿Existe alguna correlación entre el volumen y la velocidad?
 
 Haremos un grafico de puntos para visualizarlo.
 Para los datos usaremos una muestra aleatoria de toda la base de datos 
-
-
 ```{r Muestra y Plot, fig.cap="Grafico de puntos de velocidad y volumen"}
 
 velocidad_volumen_muestra <- velocidad_volumen %>% sample_n(nrow(velocidad_volumen)*0.3)
@@ -567,20 +519,20 @@ velocidad_volumen_muestra %>% ggplot() + geom_point(
 )
 
 ```
+
+
+## ¿Existe alguna correlación entre el volumen y la velocidad?
 Definitivamente **no hay una relacion lineal** entre velocidad y volumen
+```{r Correlacion de velocidad y volumen, results='asis'}
+options(xtable.comment = FALSE)
 
-## 1. ¿Existe alguna correlación entre el volumen y la velocidad?
-
-```{r Correlacion de velocidad y volumen}
-cor(velocidad_volumen)
+print(xtable::xtable(cor(velocidad_volumen)))
 ```
- La correlacion dio `r round(cor(velocidad_volumen$velocidad, velocidad_volumen$volumen), 2)`, lo que indica que no hay una correlacion lineal entre las variables.
+La correlación dio `r round(cor(velocidad_volumen$velocidad, velocidad_volumen$volumen), 2)`, lo que indica que no hay una correlación lineal entre las variables.
  
  
-## 2. ¿Cuáles son las calles con los mayores promedios de velocidad en Montevideo? ¿Con que frecuencia se cometen excesos de velocidad? 
- 
+## ¿Cuáles son las calles con los mayores promedios de velocidad en Montevideo?
 Pasemos a investigar las calles con mayor promedio de velocidad.
-
 ```{r Importar datos de velocidad-calle, echo = FALSE }
 velocidad_calles <- load_data( "velocidad_calles.csv",
   con,
@@ -593,9 +545,6 @@ velocidad_calles <- load_data( "velocidad_calles.csv",
   "
   )
 ```
-
-
-
 ```{r Calles con mayor promedio de velocidad, echo = FALSE, fig.cap="Calles con mayor promedio de velocidad"}
 avenidas <- c("18 de Julio","8 de Octubre","Agraciada", "Av Brasil", "Av Italia","Bv Artigas","Bv Batlle y Ordonez","Bv Espana","C M Ramirez","Centenario","Fernandez Crespo","Bolivia","Albo","Belloni","Benito Blanco","Burges","Garibaldi","Garzon","Gral Flores","Millan","Morquio","Ponce","Rambla","Ricaldoni","Rivera","Rodo","San Martin","Saravia", "Soca","Uruguay","Varela", "L A de Herrera")  
 
@@ -630,14 +579,14 @@ velocidad_calles %>%
   theme_bw()
   
 ```
-## 2. ¿Cuáles son las calles con los mayores promedios de velocidad en Montevideo? ¿Con que frecuencia se cometen excesos de velocidad? 
 
-El siguiente gráfico nos muestra que las 3 calles con mas velocidad en promedio superan el máximo de 45km/h siendo este la velocidad máxima de circulación reglamentaria. La avenida más rápida en promedio no alcanza el máximo de velocidad perimitido
+## ¿Cuáles son las calles con los mayores promedios de velocidad en Montevideo? ¿Con que frecuencia se cometen excesos de velocidad? 
+El gráfico nos muestra que las 3 calles con mas velocidad en promedio superan el máximo de 45km/h siendo este la velocidad máxima de circulación reglamentaria. La avenida más rápida en promedio no alcanza el máximo de velocidad perimitido
 
 En promedio de velocidad circulacion los conductores son prudentes, aun asi vemos con que frecuencia se comenten excesos de velocidad.
 
-## 2. ¿Cuáles son las calles con los mayores promedios de velocidad en Montevideo? ¿Con que frecuencia se cometen excesos de velocidad? 
-
+## ¿Con que frecuencia se cometen excesos de velocidad? 
+Si bien las proporciones son de valor bajo tengamos en cuenta que estamos tomando el 1% de mas de 85 millones de registros, es decir que hay mas de 850 mil infracciones de velocidad solo en Avenida Rivera, en Avenida Italia hay mucha mas diferencia superando el millón cuatrocientos en casi 2 años y medio.
 ```{r Importar datos de exceso de velocidad, echo=FALSE }
 excesos <- load_data( "excesos.csv",
   con,
@@ -666,7 +615,7 @@ excesos %>%
     cant = (n()/nrow(excesos))*100
     ) %>%
   arrange(desc(cant)) %>% 
-  slice_head(n = 10) %>% 
+  slice_head(n = 8) %>% 
   ggplot() +
   geom_col(
     aes(
@@ -687,13 +636,8 @@ excesos %>%
   theme_bw()
 ```
 
-## 2. ¿Cuáles son las calles con los mayores promedios de velocidad en Montevideo? ¿Con que frecuencia se cometen excesos de velocidad? 
 
-Si bien es una proporción de valor bajo tengamos en cuenta que estamos tomando el 1% de mas de 85 millones de registros, es decir que hay mas de 850 mil infracciones de velocidad solo en Avenida Rivera, en Avenida Italia hay mucha mas diferencia superando el millón cuatrocientos en casi 2 años y medio.
-
-
-## 3. ¿Cómo va variando el volumen y velocidad medidos a traves de el tiempo?
-
+## ¿Cómo va variando el volumen y velocidad medidos a traves de el tiempo?
 ```{r registros_maximos_hora, echo = FALSE}
 registros_maximos_hora <- load_data("registros_maximos_hora.csv",
     con,
@@ -746,7 +690,6 @@ registros_maximos_hora <- load_data("registros_maximos_hora.csv",
     "
   )
 ```
-
 ```{r Datos para mapa de calor}
 max_velocidad_hora_barrio <- load_data("max_velocidad_hora_barrio.csv",
     con,
@@ -855,14 +798,12 @@ promedios_semanales <- load_data("promedios_semanales.csv",
         ) 
     )
 ```
+Primero observemos como va variado volumen 
 
-### Volumen
-Primero observemos como va variado volumen y volumen_hora
-
-## Volumen
+## VOlumen
 
 #### Variacion por hora del dia
-
+Vamos a ver que en Parque Rodo hay valores altos durante la noche, que lo diferencia del resto de los barrios.
 ```{r Mapa de calor, fig.cap="Mapa de calor de volumen maxima por barrio por rango de hora"}
 max_velocidad_hora_barrio %>%
   ggplot(
@@ -890,45 +831,48 @@ max_velocidad_hora_barrio %>%
 ```
 
 
-En Parque Rodo hay valores altos durante la noche, que lo diferencia del resto de los barrios.
+
 
 
 ## Volumen
-
 
 #### Variacion del volumen por dia de la semana
-
 Se puede notar un volumen claramente más alto los días de semana, yendo en aumento de lunes a viernes, hasta bajar el promedio los fines de semana. 
 El día de la semana con más volumen de tránsito es el viernes, y el de menor volumen es el domingo.
-
-## Volumen
 ```{r}
 promedios_semanales %>% ggplot() +
   geom_col(
     aes(
       x = dia_semana,
-      y = avg_volumen,
-    )
+      y = avg_volumen
+    ),
+    fill = "black"
   ) + 
   geom_text(
     aes( 
       x = dia_semana, 
       y = avg_volumen, 
-      label = round(avg_volumen, 2) 
+      label = round(avg_volumen, 2)
     ),
-    vjust = -0.5
+    color = "white",
+    vjust = 5, 
+    size = 8
   ) +
   labs(
     x = "Dia de la semana",
-    y = "Promedio"
-  ) 
+    y = "Volumen Promedio"
+  ) + 
+  theme(aspect.ratio = 0.4)
 ```
-## Volumen
-
-Se puede notar un comportamiento casi idéntico en la cantidad de observaciones del volumen, según el día de la semana. La mayoría de los datos se concentra cuando el volumen está entre 0 y 10, la mayoría de los días. Los fines de semana (En especial el domingo) se puede observar un comportamiento distinto, ya que cuando el volumen está entre 0 y 10, la cantidad de observaciónes es mucho mayor, y no hay tanta concentración de datos cuando el volumen aumenta.
 
 ## Volumen
 
+#### Variacion de la velocidad por dia de la semana
+En el siguiente gráfico se puede notar un comportamiento casi idéntico en la cantidad de observaciones del volumen, según el día de la semana. La mayoría de los datos se concentra cuando el volumen está entre 0 y 10, la mayoría de los días. Los fines de semana (En especial el domingo) se puede observar un comportamiento distinto, ya que cuando el volumen está entre 0 y 10, la cantidad de observaciones es mucho mayor, y no hay tanta concentración de datos cuando el volumen aumenta.
+
+## Volumen
+
+#### Variacion de la velocidad por dia de la semana
 ```{r, echo = FALSE, fig.cap="Densidad de Volumen"}
 tabla %>%
   ggplot() + 
@@ -947,15 +891,10 @@ tabla %>%
   coord_cartesian(xlim = c(0, 100))
 ```
 
-## Velocidad
+## Veamos ahora la variable velocidad
 
-
-#### Variacion de la velocidad por dia de la semana
 
 Podemos observar que el promedio de velocidad es casi el mismo para cada día de la semana, a excepción de los fines de semana, donde la velocidad aumenta levemente. Esto concuerda con la disminución del volumen los fines de semana, visto anteriormente.
-
-## Velocidad
-
 ```{r}
 promedios_semanales %>% ggplot() +
   geom_col(
@@ -978,14 +917,10 @@ promedios_semanales %>% ggplot() +
   ) 
 ```
 
-
-
-Viendo la densidad de la velocidad parece no variar a lo largo de los días de la semana. Alcanzan su valor máximo alrededor de los 35km/h.
-
-
 ## Velocidad
 
-
+### Velocidad por dia de la semana
+Viendo la densidad de la velocidad parece no variar a lo largo de los días de la semana. Alcanzan su valor máximo alrededor de los 35km/h.
 ```{r, echo = FALSE, fig.cap="Densidad de Velocidad"}
 tabla %>%
   ggplot() + 
@@ -1005,11 +940,11 @@ tabla %>%
 
 ## Velocidad
 
+### Velocidades maximas registradas
 Dentro de los días de la semana hemos observado diferentes comportamientos de la velocidad durante los días sábado y domingo (fin de semana), en particular observemos las velocidades máximas registradas de lunes a viernes y durante el fin de semana.
 
 
 ## Velocidad
-
 ```{r Grafico de distribucion max_velocidad por hora, echo = FALSE, fig.cap='Distribucion maxima velocidad por hora'}
 mediana <- registros_maximos_hora %>% 
   summarise(mediana = median(max_velocidad))
@@ -1055,8 +990,7 @@ Esto también está muy relacionado a lo visto anteriormente sobre el volumen, y
 
 
 ## Velocidad
-
-
+Luego, con respecto a los meses, se puede ver que los dos meses en los cuales la densidad de la velocidad máxima es más similar los días de semana y los fines de semana son enero y febrero, y esto puede ser causado por las vacaciones de verano.
 ```{r Densidades de max_velocidad x mes del año, fig.cap='Densidad de la velocidad por meses'}
 registros_maximos_hora %>%
   ggplot(
@@ -1084,11 +1018,6 @@ registros_maximos_hora %>%
 ```
 
 ## Velocidad
-
-Luego, con respecto a los meses, se puede ver que los dos meses en los cuales la densidad de la velocidad máxima es más similar los días de semana y los fines de semana son enero y febrero, y esto puede ser causado por las vacaciones de verano.
-
-
-
 
 #### Variacion por año
 Si entramos en cada año vemos como crece la densidad de velocidad máxima registrada de lunes a viernes. 
@@ -1153,7 +1082,7 @@ Además, si separamos por hora del día podemos ver que los momentos de mayor vo
 
 ## Velocidad
 
-
+### Variacion conjunta de velocidad y volumen
 ```{r}
 registros_maximos_hora %>% 
   ggplot(
@@ -1203,8 +1132,10 @@ Los datos están agrupados por detector, hora, y día de la semana (Fin de seman
 
 ## Predicir velocidad promedio de un sensor
 
+### Nuestros datos:
+```{r Datos para arbol, echo=FALSE, results='asis'}
+options(xtable.comment = FALSE)
 
-```{r Datos para arbol}
 datos_arbol <- load_data("datos_arbol.csv",
   con,
   "
@@ -1224,8 +1155,7 @@ GROUP BY
     esDeDia
   "
 )
-
-nrow(datos_arbol)
+print(xtable::xtable(head(datos_arbol)))
 ```
 
 ## Predicir velocidad promedio de un sensor
@@ -1234,8 +1164,6 @@ Ya tenemos los datos, nos queda armar el arbol.
 Primero, tomaremos una muestra para crear los conjuntos de entrenamiento y prueba. La proporción será de un 70% para entrenamiento y un 30% para prueba. Antes de tomar la muestra fijaremos una semilla para poder analizar el mismo modelo de forma reproducible.
 
 ## Predicir velocidad promedio de un sensor
-
-
 ```{r Arbol training}
 set.seed(946)
 intrain <- sample(x = 1:nrow(datos_arbol), size = nrow(datos_arbol)*0.7)
@@ -1246,9 +1174,6 @@ testing <- datos_arbol[-intrain,]
 
 arbol_vol <- rpart(avg_velocidad ~ esfindesemana + esdedia + avg_volumen, data = training)
 ```
-
-## Predicir velocidad promedio de un sensor
-
 Al observar el modelo, notaremos que el volumen aparece repetidas veces seccionando los datos. Esto es porque, al ser continua, hay una variabilidad mucho más alta, y hay más casos para observar.
 ```{r Arbol Plot}
 rpart.plot(arbol_vol, digits = (-4))
@@ -1256,16 +1181,12 @@ rpart.plot(arbol_vol, digits = (-4))
 ```
 
 ## Predicir velocidad promedio de un sensor
-
-
 En concordancia con el comentario anterior, la variable volumen divide los datos en 4 categorías (Con límites 2.01; 3.93; 10.11) y la variable "esdedia" solo actúa una vez, mientras la del fin de semana ni siquiera es utilizada por el arbol.
 
-Poodemos observar que los datos donde el volumen es menor a 3.93 es una minoría, ya que abarcan poco más de una décima parte. De todas formas, hay una división marcada en estos datos, ya que si el volumen es menor a 2, la velocidad suele ser de 6km/h, mientras que cuando el volumen es mayor a 2, la velocidad aumenta a casi 21km/h (Además es más significativa la cantidad de datos).
+Podemos observar que los datos donde el volumen es menor a 3.93 es una minoría, ya que abarcan poco más de una décima parte. De todas formas, hay una división marcada en estos datos, ya que si el volumen es menor a 2, la velocidad suele ser de 6km/h, mientras que cuando el volumen es mayor a 2, la velocidad aumenta a casi 21km/h (Además es más significativa la cantidad de datos).
 
 
 ## Predicir velocidad promedio de un sensor
-
-
 Cuando el volumen es mayor a 3.93 también hay un límite que demarca un comportamiento distinto entre los datos que superan y no este número, y es el 10.11. 
 Los datos que tienen un volumen menor a 10.11, abarcan casi un tercio de los datos con una velocidad promedio de 28.29km/h, y los datos con volumen mayor a 10.11 abarcan casi un 58% de los datos con una velocidad promedio de 33 km/h. Se observa que la velocidad es mayor cuando el volumen es mayor a 10.11, aunque no es una diferencia tan significativa.
 
@@ -1275,9 +1196,6 @@ Una observación interesante es la diferencia de comportamiento entre los datos 
 ## Predicir velocidad promedio de un sensor
 
 Para saber la fiabilidad del modelo, calculamos el error cuadrado medio, y en base a eso fuimos ajustando los parámetros del modelo hasta llegar al actual, ya que es el que menor error tiene.
-
-## Predicir velocidad promedio de un sensor
-
 ```{r Arbol testing}
 rmse(arbol_vol, training)
 rmse(arbol_vol, testing)
@@ -1312,7 +1230,6 @@ En esta seccion se presenta un mapa de Montevideo, obtenido del paquete \texttt{
 \end{figure}
 ```
 El mapa tiene dos capas posibles de visualizar, una es por barrios y la otra por sensores.
-
 En cada una de estas capas puedes filtrar los datos por dia de la semana y por hora. Tambien puedes ir cambiando la variable de resumen que se muestra en el mapa.
 
 ## Grafico
@@ -1326,3 +1243,8 @@ En esta seccion se presenta un grafico de barras que muestra la variable de resu
 \caption{Grafico}
 \end{figure}
 ```
+
+## Comentarios finales
+
+En promedio Montevideo es una ciudad con velocidad promedio de casi 31 km/h, no podemos dejar pasar por alto la cantidad de excesos de velocidad a valores muy elevados que durante el fin de semana se producen mas.
+Con ese valor de velocidad promedio y mirando tambien el volumen promedio de 17, podemos llegar a decir que Montevideo es una ciudad bastante lenta teniendo en consideración que las mediciones fueron hechas incluso en avenidas donde mas se circula, mucho mas en las famosas "hora pico" entre las 16 y 18hs
